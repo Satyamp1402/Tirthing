@@ -19,7 +19,11 @@ const Login = ({ isAdmin = false }) => {
       }
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      navigate('/dashboard'); // dashboard or admin dashboard handled via protected routes mostly
+      if (user.role === "admin") {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
     }

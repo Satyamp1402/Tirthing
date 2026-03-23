@@ -11,7 +11,13 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:5173",           // local frontend
+    "https://tirthing.vercel.app" // deployed frontend
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 // Routes
@@ -40,5 +46,5 @@ connectDB();
 
 // This is the missing piece!
 app.listen(PORT, () => {
-    console.log(`🚀 Server is running on http://localhost:${PORT}`);
+    console.log(`🚀 Server is running.`);
 });
