@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+
+@theme {
+  /* 🌿 BACKGROUND SYSTEM (saffron tint added) */
+  --color-bg: rgb(255 244 214);          /* warm saffron-cream */
+  --color-surface: rgb(255 249 230);     /* soft saffron ivory */
+
+  /* 🖤 TEXT SYSTEM (slightly warmer) */
+  --color-text: rgb(50 38 30);           
+  --color-text-muted: rgb(50 38 30 / 0.6);
+  --color-text-light: rgb(50 38 30 / 0.4);
+
+  /* 🟠 PRIMARY (strong saffron identity) */
+  --color-primary: rgb(251 146 60);      /* saffron-400 */
+  --color-primary-hover: rgb(194 65 12); /* deeper saffron */
+  --color-primary-soft: rgb(251 146 60 / 0.18);
+
+  /* 🪶 BORDER + INPUT (warm, not gray) */
+  --color-border: rgb(180 120 40 / 0.25);
+  --color-input-bg: rgb(251 146 60 / 0.08);
+
+  /* ✨ ACCENTS */
+  --color-accent: rgb(255 153 51);       /* slightly brighter saffron */
+
+  /* 🌫️ SHADOW (richer glow) */
+  --shadow-primary: 0 10px 30px rgba(251, 146, 60, 0.35);
+
+  /* 🌈 GRADIENTS (strong visual impact) */
+  --gradient-primary: linear-gradient(
+    to bottom right,
+    rgb(255 153 51),
+    rgb(234 88 12)
+  );
+
+  --gradient-bg: linear-gradient(
+    to bottom,
+    rgba(255, 244, 214, 0.4),
+    rgba(255, 230, 180, 0.7),
+    rgb(255, 220, 150)
+  );
+}
