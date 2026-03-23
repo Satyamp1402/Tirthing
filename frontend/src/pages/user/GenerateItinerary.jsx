@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { itineraryService } from '../../services/itinerary.service';
+import { useLocation } from 'react-router-dom';
+import { MapPin, CalendarDays, Wallet, Users } from 'lucide-react';
 
 const GenerateItinerary = () => {
+  const location = useLocation();
+
   const [formData, setFormData] = useState({
-    destination: '',
+    destination: location.state?.city || '',
     days: 1,
     budget: '',
     groupSize: 1
@@ -12,6 +16,8 @@ const GenerateItinerary = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -38,8 +44,16 @@ const GenerateItinerary = () => {
   };
 
   return (
+    
     <div className="max-w-2xl mx-auto bg-surface p-8 rounded-xl border border-border" style={{ boxShadow: 'var(--shadow-primary)' }}>
-      <h2 className="text-3xl font-extrabold text-text mb-6 text-center">Plan Your Pilgrimage</h2>
+      <div className="text-center mb-10">
+  <h1 className="text-4xl font-extrabold text-text mb-3">
+    ✨ Plan Your Perfect Pilgrimage
+  </h1>
+  <p className="text-text-muted max-w-xl mx-auto">
+    Get a personalized itinerary based on your budget, time, and group size.
+  </p>
+</div>
       {error && <div className="bg-red-100/50 text-red-600 font-medium p-4 mb-6 rounded-lg text-sm text-center">{error}</div>}
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>

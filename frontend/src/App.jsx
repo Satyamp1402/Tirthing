@@ -14,6 +14,8 @@ import AdminPlaces from './pages/admin/AdminPlaces';
 import AddPlace from './pages/admin/AddPlace';
 import PlaceDetails from './pages/admin/PlaceDetails';
 import EditPlace from './pages/admin/EditPlace';
+import BrowsePlaces from './pages/user/BrowsePlaces';
+import UserPlaceDetails from './pages/user/UserPlaceDetails';
 
 function App() {
   return (
@@ -32,6 +34,9 @@ function App() {
           <Route element={<DashboardLayout />}>
             {/* User Dashboard Routes */}
             <Route path="/dashboard" element={<Dashboard />} />
+
+            <Route path="/places" element={<BrowsePlaces />} />
+            <Route path="/places/:id" element={<UserPlaceDetails />} />
             <Route path="/generate-itinerary" element={<GenerateItinerary />} />
             <Route path="/itinerary-result" element={<ItineraryResult />} />
             <Route path="/my-itineraries" element={<MyItineraries />} />

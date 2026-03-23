@@ -39,4 +39,39 @@
     rgba(255, 230, 180, 0.7),
     rgb(255, 220, 150)
   );
+
+  /* 📜 SCROLLBAR SYSTEM */
+  --color-scrollbar-thumb: var(--color-primary);
+  --color-scrollbar-thumb-hover: var(--color-primary-hover);
+  --color-scrollbar-track: var(--color-surface);
+}
+
+
+@layer base {
+  /* Firefox Support */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
+  }
+
+  /* Chrome, Edge, and Safari Support */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-scrollbar-track);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-scrollbar-thumb);
+    border-radius: 20px;
+    /* Create a "floating" effect by adding a border that matches the track */
+    border: 3px solid var(--color-scrollbar-track);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-scrollbar-thumb-hover);
+  }
 }

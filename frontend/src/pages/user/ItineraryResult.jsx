@@ -19,7 +19,7 @@ const ItineraryResult = () => {
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
       <div className="bg-surface p-6 rounded-xl shadow-sm border border-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-text">{itinerary.destination} Trip</h1>
+          <h1 className="text-3xl font-extrabold text-text">{itinerary.destination}</h1>
           <p className="text-text-muted mt-2 font-medium bg-input-bg inline-block px-3 py-1 rounded-md border border-border text-sm">
             {itinerary.days} Days • {itinerary.groupSize} Travelers • ₹{itinerary.budget}
           </p>

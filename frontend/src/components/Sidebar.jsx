@@ -21,6 +21,7 @@ const Sidebar = () => {
     : [
         { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
         { name: 'Plan Trip', path: '/generate-itinerary', icon: PlusCircle },
+        { name: 'Browse Places', path: '/places', icon: Map },
         { name: 'My Trips', path: '/my-itineraries', icon: Map }
       ];
 
