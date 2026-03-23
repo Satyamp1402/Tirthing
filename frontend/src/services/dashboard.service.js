@@ -9,6 +9,7 @@ export const dashboardService = {
   },
   getAdminDashboard: async () => {
     const response = await api.get('/dashboard/admin');
+    console.log(response);
     return response.data;
   },
 };

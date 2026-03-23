@@ -14,7 +14,7 @@ const Sidebar = () => {
 
   const navItems = user?.role === 'admin' 
     ? [
-        { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+        { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
         { name: 'Manage Places', path: '/admin/places', icon: MapPin },
         { name: 'Add Place', path: '/admin/add-place', icon: PlusCircle }
       ]

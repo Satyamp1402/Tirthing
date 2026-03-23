@@ -68,52 +68,80 @@ export const getUserDashboardData = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
 export const getAdminDashboard = async (req, res) => {
   try {
-    // Run independent queries in parallel to save time
-    const [recentGlobalItineraries, recentAddedPlaces, counts, systemOverview] = await Promise.all([
-      Itinerary.find().populate('user', 'name email').sort({ createdAt: -1 }).limit(3),
-      Place.find().sort({ createdAt: -1 }).limit(3),
-      // Aggregate counts in one go or use Promise.all
-      Promise.all([
-        User.countDocuments({ role: 'user' }),
-        Itinerary.countDocuments(),
-        Place.countDocuments()
-      ]),
+    const [
+      recentItineraries,
+      recentPlaces,
+      totalUsers,
+      totalItineraries,
+      totalPlaces,
+      systemOverview
+    ] = await Promise.all([
+      Itinerary.find()
+        .populate('user', 'name email')
+        .sort({ createdAt: -1 })
+        .limit(3),
+
+      Place.find()
+        .sort({ createdAt: -1 })
+        .limit(3),
+
+      User.countDocuments({ role: 'user' }),
+      Itinerary.countDocuments(),
+      Place.countDocuments(),
+
       Place.aggregate([
         {
           $facet: {
-            "priorityDistribution": [
+            priorityDistribution: [
               { $group: { _id: "$priority", count: { $sum: 1 } } }
             ],
-            "budgetInsights": [
-              { $group: { 
-                  _id: null, 
+            budgetInsights: [
+              {
+                $group: {
+                  _id: null,
                   avgEntryFee: { $avg: "$entryFee" },
-                  mostExpensive: { $max: "$entryFee" } 
-              } }
+                  mostExpensive: { $max: "$entryFee" }
+                }
+              }
             ]
           }
         }
       ])
     ]);
 
+    const overview = systemOverview[0] || {};
+
     res.status(200).json({
       success: true,
+
+      counts: {   // ✅ FIXED
+        totalUsers,
+        totalItineraries,
+        totalPlaces
+      },
+
       activity: {
-        recentItineraries: recentGlobalItineraries,
-        recentPlaces: recentAddedPlaces
+        recentItineraries,
+        recentPlaces
       },
-      counts: {
-        totalUsers: counts[0],
-        totalItineraries: counts[1],
-        totalPlaces: counts[2]
-      },
-      inventoryHealth: systemOverview[0].priorityDistribution,
-      // Added optional chaining here to prevent errors if collection is empty
-      financials: systemOverview[0].budgetInsights[0] || { avgEntryFee: 0, mostExpensive: 0 }
+
+      inventoryHealth: overview.priorityDistribution || [],
+
+      financials: overview.budgetInsights?.[0] || {
+        avgEntryFee: 0,
+        mostExpensive: 0
+      }
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Admin Dashboard Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };

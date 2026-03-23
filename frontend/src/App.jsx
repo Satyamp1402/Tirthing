@@ -16,6 +16,7 @@ import PlaceDetails from './pages/admin/PlaceDetails';
 import EditPlace from './pages/admin/EditPlace';
 import BrowsePlaces from './pages/user/BrowsePlaces';
 import UserPlaceDetails from './pages/user/UserPlaceDetails';
+import AdminDashboard from './pages/admin/AdminDashboard'
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
             
             {/* Admin Dashboard Routes */}
             <Route element={<ProtectedRoute roleRequired="admin" />}>
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/places" element={<AdminPlaces />} />
               <Route path="/admin/add-place" element={<AddPlace />} />
               <Route path="/admin/places/:id" element={<PlaceDetails />} />
