@@ -95,6 +95,7 @@ const ItineraryResult = () => {
     const fetchItinerary = async () => {
       try {
         const res = await itineraryService.getItineraryById(id);
+        console.log(res)
         setItinerary(res);
       } catch (err) {
         console.error("Error fetching itinerary:", err);
@@ -148,32 +149,95 @@ const ItineraryResult = () => {
       {/* Days Mapping */}
       <div className="space-y-6">
         {itinerary.plan.map((dayPlan) => (
-          <div key={dayPlan._id || dayPlan.day} className="bg-surface rounded-xl shadow-sm border border-border overflow-hidden">
+          <div
+            key={dayPlan._id || dayPlan.day}
+            className="bg-surface rounded-xl shadow-sm border border-border overflow-hidden"
+          >
+            {/* Day Header */}
             <div className="bg-input-bg border-b border-border px-6 py-4">
-              <h3 className="text-xl font-extrabold text-primary">Day {dayPlan.day}</h3>
+              <h3 className="text-xl font-extrabold text-primary">
+                Day {dayPlan.day}
+              </h3>
             </div>
+
+            {/* Day Content */}
             <div className="p-6">
               <div className="relative border-l-2 border-primary/30 ml-3 md:ml-6 space-y-8">
                 {dayPlan.places.map((place, idx) => (
-                  <div key={place._id || idx} className="relative pl-6 sm:pl-8">
+                  <div
+                    key={place._id || idx}
+                    className="relative pl-6 sm:pl-8"
+                  >
+                    {/* Timeline Dot */}
                     <div className="absolute -left-[9px] top-2 w-4 h-4 rounded-full bg-primary ring-4 ring-surface"></div>
-                    <div className="flex flex-col md:flex-row gap-5">
+
+                    <div className="flex flex-col md:flex-row gap-5 items-start">
+
+                      {/* Image */}
                       {place.image && (
-                        <img src={place.image} alt={place.name} className="w-full md:w-36 h-28 object-cover rounded-lg" />
+                        <img
+                          src={place.image}
+                          alt={place.name}
+                          className="w-full md:w-40 h-28 object-cover rounded-lg"
+                        />
                       )}
-                      <div>
-                        <h4 className="text-xl font-bold text-text mb-1">{place.name}</h4>
-                        <p className="text-text-muted text-sm">{place.description}</p>
+
+                      {/* Content */}
+                      <div className="flex-1">
+                        <h4 className="text-xl font-bold text-text mb-1">
+                          {place.name}
+                        </h4>
+
+                        {/* 🔥 DETAILS */}
+                        <div className="flex flex-wrap gap-2 mt-2 mb-3">
+
+                          {/* Visit Duration */}
+                          <span className="px-2.5 py-1 text-xs font-semibold bg-blue-50 text-blue-700 rounded-md">
+                            ⏱ {place.visitDuration} hrs
+                          </span>
+
+                          {/* Entry Fee */}
+                          <span className="px-2.5 py-1 text-xs font-semibold bg-green-50 text-green-700 rounded-md">
+                            {place.entryFee > 0
+                              ? `₹${place.entryFee} Entry`
+                              : "Free Entry"}
+                          </span>
+
+                          {/* Map Link */}
+                          <a
+                            href={`https://www.google.com/maps?q=${place.latitude},${place.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1 text-xs font-semibold bg-purple-50 text-purple-700 rounded-md hover:underline"
+                          >
+                            📍 View on Map
+                          </a>
+
+                        </div>
+
+                        {/* Description */}
+                        <p className="text-text-muted text-sm leading-relaxed">
+                          {place.description}
+                        </p>
                       </div>
                     </div>
                   </div>
                 ))}
+
+                {/* Empty State */}
+                {dayPlan.places.length === 0 && (
+                  <div className="pl-8 text-text-light italic font-medium">
+                    No places scheduled. Rest or explore locally.
+                  </div>
+                )}
               </div>
             </div>
           </div>
         ))}
       </div>
     </div>
+
+    
   );
 };
 
