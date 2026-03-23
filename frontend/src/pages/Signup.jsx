@@ -16,7 +16,7 @@ const Signup = () => {
       const data = await authService.signup(name, email, password, role);
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      if (user.role === "admin") {
+      if (data.user.role === "admin") {
         navigate("/admin/dashboard");
       } else {
         navigate("/dashboard");
