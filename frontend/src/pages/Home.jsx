@@ -23,7 +23,7 @@ const Home = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/20 bg-primary-soft mb-8">
             <Star className="w-4 h-4 text-primary" />
-            <span className="text-sm font-semibold text-primary">The Ultimate Pilgrimage AI Planner</span>
+            <span className="text-sm font-semibold text-primary">The Ultimate Pilgrimage Planner</span>
           </div>
           <h1 className="text-5xl md:text-7xl font-extrabold text-text mb-8 tracking-tight">
             Discover Your <br className="hidden md:block"/>

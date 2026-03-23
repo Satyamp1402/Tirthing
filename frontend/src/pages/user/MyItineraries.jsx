@@ -22,7 +22,7 @@ const MyItineraries = () => {
   }, []);
 
   const handleView = (itinerary) => {
-    navigate('/itinerary-result', { state: { itinerary } });
+    navigate(`/itinerary/${itinerary._id}`);
   };
 
   if (loading) return <div className="text-center mt-20 text-text-muted font-medium">Loading your journeys...</div>;

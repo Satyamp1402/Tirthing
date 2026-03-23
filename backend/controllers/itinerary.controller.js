@@ -2,6 +2,8 @@ import Itinerary from '../models/itinerary.model.js';
 import Place from '../models/place.model.js';
 import { generateItineraryPlan } from '../utils/engine.js';
 
+
+
 export const generateItinerary = async (req, res) => {
   try {
     const { destination, days, budget, groupSize } = req.body;
@@ -47,3 +49,14 @@ export const getMyItineraries = async (req, res) => {
     res.status(500).json({ message: 'Server error fetching itineraries' });
   }
 };
+
+export const getItineraryById = async (req, res) => {
+  const itinerary = await Itinerary.findById(req.params.id);
+
+  if (!itinerary) {
+    return res.status(404).json({ message: "Not found" });
+  }
+
+  res.json(itinerary);
+};
+

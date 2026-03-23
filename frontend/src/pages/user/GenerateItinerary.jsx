@@ -7,6 +7,8 @@ import { MapPin, CalendarDays, Wallet, Users } from 'lucide-react';
 const GenerateItinerary = () => {
   const location = useLocation();
 
+  
+
   const [formData, setFormData] = useState({
     destination: location.state?.city || '',
     days: 1,
@@ -35,7 +37,7 @@ const GenerateItinerary = () => {
         groupSize: parseInt(formData.groupSize, 10)
       };
       const data = await itineraryService.generateItinerary(payload);
-      navigate('/itinerary-result', { state: { itinerary: data.itinerary } });
+      navigate(`/itinerary/${data.itinerary._id}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to generate itinerary. Try increasing budget or checking destination.');
     } finally {

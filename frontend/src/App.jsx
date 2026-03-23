@@ -38,7 +38,7 @@ function App() {
             <Route path="/places" element={<BrowsePlaces />} />
             <Route path="/places/:id" element={<UserPlaceDetails />} />
             <Route path="/generate-itinerary" element={<GenerateItinerary />} />
-            <Route path="/itinerary-result" element={<ItineraryResult />} />
+            <Route path="/itinerary/:id" element={<ItineraryResult />} />
             <Route path="/my-itineraries" element={<MyItineraries />} />
             
             {/* Admin Dashboard Routes */}
