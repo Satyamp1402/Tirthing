@@ -186,21 +186,21 @@ const handleSubmit = async (e) => {
           <label className="block text-sm font-medium text-text-muted mb-1">Description</label>
           <textarea name="description" rows="3" value={formData.description} onChange={handleChange} className="block w-full rounded-lg border border-border bg-input-bg text-text focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none transition-colors sm:text-sm p-3"></textarea>
         </div>
-        <div className="flex justify-end pt-4">
+        <div className="flex justify-center pt-4">
           <button
-  type="submit"
-  disabled={loading}
-  className="flex items-center justify-center gap-2 text-white px-8 py-3 rounded-lg font-semibold shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-  style={{ background: 'var(--gradient-primary)' }}
->
-  {loading && (
-    <span
-      className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
-    ></span>
-  )}
+            type="submit"
+            disabled={loading}
+            className="flex items-center justify-center gap-2 text-white px-8 py-3 rounded-lg font-semibold shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{ background: 'var(--gradient-primary)' }}
+          >
+            {loading && (
+              <span
+                className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
+              ></span>
+            )}
 
-  {loading ? 'Saving...' : 'Save Place'}
-</button>
+            {loading ? 'Saving...' : 'Save Place'}
+          </button>
         </div>
       </form>
     </div>

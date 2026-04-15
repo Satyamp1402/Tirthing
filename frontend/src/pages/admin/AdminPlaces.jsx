@@ -38,9 +38,9 @@ const AdminPlaces = () => {
 
   return (
     <div className="bg-surface p-8 rounded-xl shadow-lg border border-border">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center flex-wrap gap-4 mb-8">
         <h2 className="text-3xl font-extrabold text-text tracking-tight">Manage Places</h2>
-        <Link to="/admin/add-place" className="text-white px-6 py-2.5 rounded-lg shadow-md hover:shadow-lg transition-all font-semibold" style={{ background: 'var(--gradient-primary)' }}>
+        <Link to="/admin/add-place" className="text-white px-6 py-2.5 rounded-lg shadow-md hover:shadow-lg transition-all font-semibold hidden md:block" style={{ background: 'var(--gradient-primary)' }}>
           + Add New Place
         </Link>
       </div>
