@@ -14,6 +14,7 @@ const FeatureCard = ({ icon: Icon, title, description }) => (
 
 const Home = () => {
   return (
+    
     <div className="min-h-screen bg-bg">
       {/* Hero Section */}
       <section className="relative pt-24 pb-32 overflow-hidden border-b border-border">
