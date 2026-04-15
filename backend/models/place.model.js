@@ -4,6 +4,7 @@ const placeSchema = new mongoose.Schema({
   name: { type: String, required: true },
   city: { type: String, required: true },
   image: { type: String, required: true }, // URL only
+  publicId: { type: String, required: true },
   latitude: { type: Number, required: true },
   longitude: { type: Number, required: true },
   visitDuration: { type: Number, required: true }, // in hours

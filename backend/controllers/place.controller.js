@@ -1,21 +1,53 @@
-import Place from '../models/place.model.js';
+import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
+import Place from "../models/place.model.js";
 
 export const addPlace = async (req, res) => {
   try {
-    const { name, city, image, latitude, longitude, visitDuration, entryFee, priority, description } = req.body;
+    const {
+      name,
+      city,
+      latitude,
+      longitude,
+      visitDuration,
+      entryFee,
+      priority,
+      description
+    } = req.body;
 
+    // 🔥 check file
+    if (!req.file) {
+      return res.status(400).json({ message: "Image is required" });
+    }
+
+    // 🔥 upload
+    const { url, publicId } = await uploadToCloudinary(req.file.buffer);
+
+    // 🔥 save
     const newPlace = new Place({
-      name, city, image, latitude, longitude, visitDuration, entryFee, priority, description
+      name,
+      city,
+      image: url,
+      publicId, // ✅ stored
+      latitude,
+      longitude,
+      visitDuration,
+      entryFee,
+      priority,
+      description
     });
 
     await newPlace.save();
-    res.status(201).json({ message: 'Place added successfully', place: newPlace });
+
+    res.status(201).json({
+      message: "Place added successfully",
+      place: newPlace
+    });
+
   } catch (error) {
-    console.error('Error adding place:', error);
-    res.status(500).json({ message: 'Server error adding place' });
+    console.error("Error adding place:", error);
+    res.status(500).json({ message: "Server error adding place" });
   }
 };
-
 export const getAllPlaces = async (req, res) => {
   try {
     const places = await Place.find({});

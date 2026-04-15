@@ -99,6 +99,79 @@ const AdminDashboard = () => {
         <div className="mt-8 grid grid-cols-1 gap-8 xl:grid-cols-3">
           {/* Left Side */}
           <div className="space-y-8 xl:col-span-2">
+
+
+            {/* Recent Places */}
+            <section className="rounded-3xl border border-border bg-(--color-surface) p-5 shadow-sm sm:p-6">
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-bold sm:text-2xl">Recently Added Places</h2>
+                  <p className="mt-1 text-sm text-text-muted">
+                    Newly added destination entries with fee details.
+                  </p>
+                </div>
+                <div className="hidden items-center gap-2 rounded-full bg-primary-soft px-3 py-1 text-xs font-semibold text-(--color-primary-hover) sm:inline-flex">
+                  <MapPin className="h-3.5 w-3.5" />
+                  Latest places
+                </div>
+              </div>
+
+              <div className="grid gap-4">
+                {(data?.activity?.recentPlaces || []).map((place) => {
+                  const image =
+                    place.image ||
+                    `https://source.unsplash.com/600x400/?${encodeURIComponent(
+                      place.city || place.name || 'place'
+                    )}`;
+
+                  return (
+                    <article
+                      key={place._id}
+                      className="group overflow-hidden rounded-2xl border border-border bg-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-(--shadow-primary)"
+                    >
+                      <div className="flex flex-col gap-0 sm:flex-row">
+                        <div className="relative sm:w-44 md:w-52">
+                          <img
+                            src={image}
+                            alt={place.name}
+                            className="h-48 w-full object-cover sm:h-full"
+                          />
+                          <div className="absolute inset-0 bg-linear-to-t from-black/25 via-transparent to-transparent" />
+                        </div>
+
+                        <div className="flex flex-1 flex-col p-4 sm:p-5">
+                          <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="min-w-0">
+                              <h3 className="truncate text-lg font-bold text-text">
+                                {place.name}
+                              </h3>
+                              <p className="mt-1 flex items-center gap-1.5 text-sm text-text-muted">
+                                <MapPin className="h-4 w-4" />
+                                {place.city}
+                              </p>
+                            </div>
+
+                            <div className="shrink-0 rounded-full bg-primary-soft px-3 py-1.5 text-sm font-bold text-(--color-primary-hover)">
+                              ₹{place.entryFee || 0}
+                            </div>
+                          </div>
+
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <InfoChip label="City" value={place.city || 'N/A'} />
+                            <InfoChip label="Entry Fee" value={`₹${place.entryFee || 0}`} />
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+
+                {(data?.activity?.recentPlaces || []).length === 0 && (
+                  <EmptyState text="No recently added places found." />
+                )}
+              </div>
+            </section>
+
             {/* Recent Itineraries */}
             <section className="rounded-3xl border border-border bg-(--color-surface) p-5 shadow-sm sm:p-6">
               <div className="mb-5 flex items-center justify-between gap-3">
@@ -194,76 +267,7 @@ const AdminDashboard = () => {
               </div>
             </section>
 
-            {/* Recent Places */}
-            <section className="rounded-3xl border border-border bg-(--color-surface) p-5 shadow-sm sm:p-6">
-              <div className="mb-5 flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-xl font-bold sm:text-2xl">Recently Added Places</h2>
-                  <p className="mt-1 text-sm text-text-muted">
-                    Newly added destination entries with fee details.
-                  </p>
-                </div>
-                <div className="hidden items-center gap-2 rounded-full bg-primary-soft px-3 py-1 text-xs font-semibold text-(--color-primary-hover) sm:inline-flex">
-                  <MapPin className="h-3.5 w-3.5" />
-                  Latest places
-                </div>
-              </div>
-
-              <div className="grid gap-4">
-                {(data?.activity?.recentPlaces || []).map((place) => {
-                  const image =
-                    place.image ||
-                    `https://source.unsplash.com/600x400/?${encodeURIComponent(
-                      place.city || place.name || 'place'
-                    )}`;
-
-                  return (
-                    <article
-                      key={place._id}
-                      className="group overflow-hidden rounded-2xl border border-border bg-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-(--shadow-primary)"
-                    >
-                      <div className="flex flex-col gap-0 sm:flex-row">
-                        <div className="relative sm:w-44 md:w-52">
-                          <img
-                            src={image}
-                            alt={place.name}
-                            className="h-48 w-full object-cover sm:h-full"
-                          />
-                          <div className="absolute inset-0 bg-linear-to-t from-black/25 via-transparent to-transparent" />
-                        </div>
-
-                        <div className="flex flex-1 flex-col p-4 sm:p-5">
-                          <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
-                            <div className="min-w-0">
-                              <h3 className="truncate text-lg font-bold text-text">
-                                {place.name}
-                              </h3>
-                              <p className="mt-1 flex items-center gap-1.5 text-sm text-text-muted">
-                                <MapPin className="h-4 w-4" />
-                                {place.city}
-                              </p>
-                            </div>
-
-                            <div className="shrink-0 rounded-full bg-primary-soft px-3 py-1.5 text-sm font-bold text-(--color-primary-hover)">
-                              ₹{place.entryFee || 0}
-                            </div>
-                          </div>
-
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            <InfoChip label="City" value={place.city || 'N/A'} />
-                            <InfoChip label="Entry Fee" value={`₹${place.entryFee || 0}`} />
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-
-                {(data?.activity?.recentPlaces || []).length === 0 && (
-                  <EmptyState text="No recently added places found." />
-                )}
-              </div>
-            </section>
+            
           </div>
 
           {/* Right Side */}

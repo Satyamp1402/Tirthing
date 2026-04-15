@@ -5,7 +5,7 @@ const Header = () => {
 
   return (
     <header className="h-16 bg-surface border-b border-border shadow-sm flex items-center justify-between px-8 z-10">
-      <h2 className="text-xl font-bold text-text hidden sm:block">Dashboard Overview</h2>
+      {/* <h2 className="text-xl font-bold text-text hidden sm:block">Welcome</h2> */}
       <div className="flex items-center gap-4 ml-auto">
         <div className="flex flex-col items-end">
           <span className="text-sm font-bold text-text">{user.name || 'User'}</span>

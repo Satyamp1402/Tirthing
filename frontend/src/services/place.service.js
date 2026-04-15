@@ -5,10 +5,16 @@ export const placeService = {
     const response = await api.get('/place/all');
     return response.data;
   },
+  
   addPlace: async (payload) => {
-    const response = await api.post('/place/add', payload);
+    const response = await api.post('/place/add', payload, {
+      headers: {
+        "Content-Type": "multipart/form-data"
+      }
+    });
     return response.data;
   },
+
   updatePlace: async (id, payload) => {
     const response = await api.put(`/place/${id}`, payload);
     return response.data;

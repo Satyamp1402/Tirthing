@@ -3,10 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { placeService } from '../../services/place.service';
 
 const AddPlace = () => {
+  // const [formData, setFormData] = useState({
+  //   name: '', city: '', image: '', latitude: '', longitude: '',
+  //   visitDuration: '', entryFee: '0', priority: '2', description: ''
+  // });
+
+  const [loading, setLoading] = useState(false);
+
   const [formData, setFormData] = useState({
-    name: '', city: '', image: '', latitude: '', longitude: '',
-    visitDuration: '', entryFee: '0', priority: '2', description: ''
-  });
+  name: '',
+  city: '',
+  placeImage: null, // 🔥 important
+  latitude: '',
+  longitude: '',
+  visitDuration: '',
+  entryFee: '0',
+  priority: '2',
+  description: ''
+});
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
@@ -14,7 +28,7 @@ const AddPlace = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit2 = async (e) => {
     e.preventDefault();
     try {
       const payload = {
@@ -32,6 +46,67 @@ const AddPlace = () => {
     }
   };
 
+  const handleSubmit3 = async (e) => {
+  e.preventDefault();
+
+  try {
+    const data = new FormData();
+
+    data.append("name", formData.name);
+    data.append("city", formData.city);
+    data.append("placeImage", formData.placeImage); // 🔥 must match multer name
+    data.append("latitude", parseFloat(formData.latitude));
+    data.append("longitude", parseFloat(formData.longitude));
+    data.append("visitDuration", parseFloat(formData.visitDuration));
+    data.append("entryFee", parseFloat(formData.entryFee));
+    data.append("priority", parseInt(formData.priority));
+    data.append("description", formData.description);
+
+    await placeService.addPlace(data);
+
+    navigate('/admin/places');
+
+  } catch (err) {
+    setError(err.response?.data?.message || 'Failed to add place');
+  }
+};
+
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError('');
+
+  try {
+    const data = new FormData();
+
+    if (!formData.placeImage) {
+  setError('Please upload an image');
+  setLoading(false);
+  return;
+}
+
+    data.append("name", formData.name);
+    data.append("city", formData.city);
+    data.append("placeImage", formData.placeImage);
+    data.append("latitude", parseFloat(formData.latitude));
+    data.append("longitude", parseFloat(formData.longitude));
+    data.append("visitDuration", parseFloat(formData.visitDuration));
+    data.append("entryFee", parseFloat(formData.entryFee));
+    data.append("priority", parseInt(formData.priority));
+    data.append("description", formData.description);
+
+    await placeService.addPlace(data);
+
+    navigate('/admin/places');
+
+  } catch (err) {
+    setError(err.response?.data?.message || 'Failed to add place');
+  } finally {
+    setLoading(false);
+  }
+};
+
   return (
     <div className="bg-surface p-8 rounded-xl shadow-lg border border-border max-w-3xl mx-auto" style={{ boxShadow: 'var(--shadow-primary)' }}>
       <h2 className="text-3xl font-extrabold text-text mb-8 tracking-tight">Add New Place</h2>
@@ -48,9 +123,37 @@ const AddPlace = () => {
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-text-muted mb-1">Image URL</label>
-          <input type="url" name="image" required value={formData.image} onChange={handleChange} className="block w-full rounded-lg border border-border bg-input-bg text-text focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none transition-colors sm:text-sm p-3" />
-        </div>
+  <label className="block text-sm font-medium text-text-muted mb-2">
+    Upload Image
+  </label>
+
+  <div className="flex items-center gap-4">
+    
+    <label
+      className="cursor-pointer px-4 py-2 rounded-lg font-medium text-sm transition-all"
+      style={{
+        background: 'var(--color-primary-soft)',
+        color: 'var(--color-primary-hover)',
+        border: '1px solid var(--color-border)'
+      }}
+    >
+      Choose File
+      <input
+  type="file"
+  name="placeImage"
+  accept="image/*"
+  className="hidden"
+  onChange={(e) =>
+    setFormData({ ...formData, placeImage: e.target.files[0] })
+  }
+/>
+    </label>
+
+    <span className="text-sm text-text-light">
+      {formData.placeImage ? formData.placeImage.name : 'No file chosen'}
+    </span>
+  </div>
+</div>
         <div className="grid grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-text-muted mb-1">Latitude</label>
@@ -84,7 +187,20 @@ const AddPlace = () => {
           <textarea name="description" rows="3" value={formData.description} onChange={handleChange} className="block w-full rounded-lg border border-border bg-input-bg text-text focus:border-primary focus:ring-2 focus:ring-primary focus:outline-none transition-colors sm:text-sm p-3"></textarea>
         </div>
         <div className="flex justify-end pt-4">
-          <button type="submit" className="text-white px-8 py-3 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all" style={{ background: 'var(--gradient-primary)' }}>Save Place</button>
+          <button
+  type="submit"
+  disabled={loading}
+  className="flex items-center justify-center gap-2 text-white px-8 py-3 rounded-lg font-semibold shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+  style={{ background: 'var(--gradient-primary)' }}
+>
+  {loading && (
+    <span
+      className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
+    ></span>
+  )}
+
+  {loading ? 'Saving...' : 'Save Place'}
+</button>
         </div>
       </form>
     </div>
