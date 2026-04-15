@@ -142,7 +142,7 @@ const ItineraryResult = () => {
           className="text-white px-5 py-2.5 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
           style={{ background: 'var(--gradient-primary)' }}
         >
-          Download PDF (Frontend)
+          Download PDF 
         </button>
       </div>
 

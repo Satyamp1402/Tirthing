@@ -18,7 +18,7 @@ const BrowsePlaces = () => {
     <div className="min-h-screen bg-bg px-6 pb-10">
 
       {/* Header */}
-      <h1 className="text-3xl font-extrabold text-text mb-8 tracking-tight">
+      <h1 className="text-3xl font-bold text-text mb-8 tracking-tight">
         Browse Places
       </h1>
 

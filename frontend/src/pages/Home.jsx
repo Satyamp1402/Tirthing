@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Compass, Map, Calendar, Users, Star, ArrowRight } from 'lucide-react';
+import { Compass, Map, Calendar, Users, Star, ArrowRight, FileText, MapPin, Route, Navigation } from 'lucide-react';
 
 const FeatureCard = ({ icon: Icon, title, description }) => (
   <div className="bg-surface p-8 rounded-2xl shadow-sm border border-border hover:shadow-lg transition-all duration-300 group">
@@ -59,7 +59,7 @@ const Home = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-24 bg-surface">
+      {/* <section className="py-24 bg-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl md:text-4xl font-extrabold text-text mb-4">Everything you need for the perfect pilgrimage</h2>
@@ -84,7 +84,60 @@ const Home = () => {
             />
           </div>
         </div>
-      </section>
+      </section> */}
+      {/* Features Section */}
+<section className="py-24 bg-surface">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="text-center max-w-3xl mx-auto mb-16">
+      <h2 className="text-3xl md:text-4xl font-extrabold text-text mb-4">
+        Everything you need for a perfect pilgrimage
+      </h2>
+      <p className="text-lg text-text-muted">
+        Plan your journey efficiently with smart tools built for seamless travel experiences.
+      </p>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+      <FeatureCard 
+        icon={Map}
+        title="Itinerary Generation"
+        description="Generate complete day-wise travel plans based on your budget, time, and selected preferences."
+      />
+
+      <FeatureCard 
+        icon={FileText}
+        title="Export to PDF"
+        description="Download your itinerary as a PDF and access it anytime during your journey."
+      />
+
+      <FeatureCard 
+        icon={MapPin}
+        title="Browse Places"
+        description="Explore available destinations with detailed information like entry fee, duration, and priority."
+      />
+
+      <FeatureCard 
+        icon={Navigation}
+        title="View on Map"
+        description="Visualize your entire trip on an interactive map with all destinations clearly marked."
+      />
+
+      <FeatureCard 
+        icon={Route}
+        title="Optimized Itinerary Logic"
+        description="Plans are generated using smart logic based on budget limits, time constraints, and location proximity."
+      />
+
+      <FeatureCard 
+        icon={Users}
+        title="Flexible for All Travelers"
+        description="Plan trips easily whether you're traveling solo, with family, or in a group."
+      />
+
+    </div>
+  </div>
+</section>
 
       {/* How It Works */}
       <section className="py-24 bg-bg border-t border-border">

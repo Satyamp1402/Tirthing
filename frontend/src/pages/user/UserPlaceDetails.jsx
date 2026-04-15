@@ -23,7 +23,7 @@ const UserPlaceDetails = () => {
 
       {/* 🔥 HERO SECTION */}
       <div className="max-w-5xl mx-auto mb-8">
-        <div className="relative h-80 rounded-2xl overflow-hidden shadow-(--shadow-primary)">
+        <div className="relative h-96 sm:h-[75vh] rounded-2xl overflow-hidden shadow-(--shadow-primary)">
           <img
             src={place.image}
             alt={place.name}
