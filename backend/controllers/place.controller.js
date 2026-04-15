@@ -1,4 +1,5 @@
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
+import { deleteFromCloudinary } from "../utils/deleteFromCloudinary.js";
 import Place from "../models/place.model.js";
 
 export const addPlace = async (req, res) => {
@@ -76,24 +77,56 @@ export const getPlaceById = async (req, res) => {
   }
 };
 
-
 export const updatePlace = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const updatedPlace = await Place.findByIdAndUpdate(
-      id,
-      { ...req.body }, // update whatever fields admin sends
-      {
-        new: true,         // return updated doc
-        runValidators: true // apply schema validation
-      }
-    );
+    // 🔥 find existing place
+    const place = await Place.findById(id);
 
-    if (!updatedPlace) {
+    if (!place) {
       return res.status(404).json({ message: "Place not found" });
     }
 
+    let imageUrl = place.image;
+    let publicId = place.publicId;
+
+    // 🔥 if new image uploaded
+    if (req.file) {
+
+      const uploaded = await uploadToCloudinary(req.file.buffer);
+
+      if (place.publicId) {
+        await deleteFromCloudinary(place.publicId); // delete AFTER upload success
+      }
+      imageUrl = uploaded.url;
+      publicId = uploaded.publicId;
+    }
+      
+    const updatedData = {
+      name: req.body.name ?? place.name,
+      city: req.body.city ?? place.city,
+      description: req.body.description ?? place.description,
+
+      latitude: req.body.latitude ? Number(req.body.latitude) : place.latitude,
+      longitude: req.body.longitude ? Number(req.body.longitude) : place.longitude,
+      visitDuration: req.body.visitDuration ? Number(req.body.visitDuration) : place.visitDuration,
+      entryFee: req.body.entryFee ? Number(req.body.entryFee) : place.entryFee,
+      priority: req.body.priority ? Number(req.body.priority) : place.priority,
+
+      image: imageUrl,
+      publicId: publicId
+    };
+
+    // 🔥 update fields
+    const updatedPlace = await Place.findByIdAndUpdate(
+      id,
+      updatedData,
+      {
+        returnDocument: 'after', // ✅ FIXED
+        runValidators: true
+      }
+    );
     res.status(200).json({
       message: "Place updated successfully",
       place: updatedPlace
@@ -105,16 +138,29 @@ export const updatePlace = async (req, res) => {
   }
 };
 
+
+
 export const deletePlace = async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedPlace = await Place.findByIdAndDelete(id);
-    
-    if (!deletedPlace) {
+
+    // 🔥 find place first (so we get publicId)
+    const place = await Place.findById(id);
+
+    if (!place) {
       return res.status(404).json({ message: 'Place not found' });
     }
 
+    // 🔥 delete image from cloudinary
+    if (place.publicId) {
+      await deleteFromCloudinary(place.publicId);
+    }
+
+    // 🔥 delete from DB
+    await Place.findByIdAndDelete(id);
+
     res.status(200).json({ message: 'Place deleted successfully' });
+
   } catch (error) {
     console.error('Error deleting place:', error);
     res.status(500).json({ message: 'Server error deleting place' });

@@ -16,7 +16,11 @@ export const placeService = {
   },
 
   updatePlace: async (id, payload) => {
-    const response = await api.put(`/place/${id}`, payload);
+    const response = await api.put(`/place/${id}`, payload, {
+      headers: {
+        "Content-Type": "multipart/form-data"
+      }
+    });
     return response.data;
   },
   getPlaceById: async (id) => {

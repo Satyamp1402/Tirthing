@@ -10,7 +10,7 @@ router.post('/add', requireAuth, requireAdmin, upload.single("placeImage"), addP
 router.get('/all', getAllPlaces);
 router.get('/:id', getPlaceById);
 
-router.put('/:id', requireAuth, requireAdmin, updatePlace);
+router.put('/:id', requireAuth, requireAdmin, upload.single("placeImage"), updatePlace);
 
 router.delete('/:id', requireAuth, requireAdmin, deletePlace);
 
