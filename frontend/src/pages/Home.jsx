@@ -37,14 +37,14 @@ const Home = () => {
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
             <Link
-              to="/login"
+              to="/signup"
               className="w-full sm:w-auto px-8 py-4 rounded-xl text-white font-semibold flex items-center justify-center gap-2 transition-transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
               style={{ background: 'var(--gradient-primary)' }}
             >
               Start Your Journey <ArrowRight className="w-5 h-5" />
             </Link>
             <Link
-              to="/admin-login"
+              to="/admin-signup"
               className="w-full sm:w-auto px-8 py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all border shadow-sm hover:bg-input-bg"
               style={{ 
                 backgroundColor: 'var(--color-surface)',

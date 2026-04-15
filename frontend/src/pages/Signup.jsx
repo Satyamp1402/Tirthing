@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/auth.service';
+import { Eye, EyeOff } from "lucide-react";
 
-const Signup = () => {
+const Signup = ({ isAdmin = false }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('user');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
+      const role = isAdmin ? "admin" : "user";
       const data = await authService.signup(name, email, password, role);
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
@@ -23,14 +28,16 @@ const Signup = () => {
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Signup failed');
+    }finally{
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center">
+    <div className="min-h-screen h-auto flex items-center justify-center">
       <div className="max-w-md w-full space-y-8 p-8 rounded-xl shadow-lg border border-border bg-surface">
         <div>
-          <h2 className="mt-2 text-center text-3xl font-extrabold text-text">Create an account</h2>
+          <h2 className="mt-2 text-center text-3xl font-extrabold text-text">{isAdmin ? "Admin Portal - Signup" : "Sign up"}</h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSignup}>
           {error && <div className="text-red-500 text-sm p-2 bg-red-50 rounded text-center">{error}</div>}
@@ -41,7 +48,10 @@ const Signup = () => {
                 type="text" required
                 className="mt-1 block w-full px-4 py-2 bg-input-bg border border-border text-text rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-colors"
                 placeholder="Full Name"
-                value={name} onChange={(e) => setName(e.target.value)}
+                value={name} onChange={(e) => {
+                  setName(e.target.value);
+                  setError('');
+                }}
               />
             </div>
             <div>
@@ -50,41 +60,63 @@ const Signup = () => {
                 type="email" required
                 className="mt-1 block w-full px-4 py-2 bg-input-bg border border-border text-text rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-colors"
                 placeholder="Email address"
-                value={email} onChange={(e) => setEmail(e.target.value)}
+                value={email} onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError('');
+                }}
               />
             </div>
-            <div>
+            <div className="relative">
               <label className="text-sm font-medium text-text-muted">Password</label>
+
               <input
-                type="password" required
-                className="mt-1 block w-full px-4 py-2 bg-input-bg border border-border text-text rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-colors"
+                type={showPassword ? "text" : "password"}
+                required
+                className="mt-1 block w-full px-4 py-2 pr-10 bg-input-bg border border-border text-text rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-colors"
                 placeholder="Password"
-                value={password} onChange={(e) => setPassword(e.target.value)}
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError('');
+                }}
               />
+
+              {/* Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-[38px] text-text-muted hover:text-text"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
-            <div>
+            {/* <div>
               <label className="text-sm font-medium text-text-muted">Role</label>
               <select
                 className="mt-1 block w-full px-4 py-2 bg-input-bg border border-border text-text rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-colors"
-                value={role} onChange={(e) => setRole(e.target.value)}
+                value={role} onChange={(e) => {
+                  setRole(e.target.value);
+                  setError('');
+                }}
               >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
               </select>
-            </div>
+            </div> */}
           </div>
           <div>
             <button
+            disabled = {loading}
               type="submit"
               className="w-full flex justify-center py-3 px-4 rounded-md text-white font-semibold transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
               style={{ background: 'var(--gradient-primary)' }}
             >
-              Sign Up
+              {loading ? "Please wait. Signing up...." : "Sign Up"} 
             </button>
           </div>
         </form>
         <div className="text-center mt-4">
-          <Link to="/login" className="text-primary hover:text-primary-hover font-medium">Already have an account? Log in</Link>
+          <Link to= {isAdmin ? "/admin-login" : "/login"} className="text-primary hover:text-primary-hover font-medium">Already have an account? Log in</Link>
         </div>
       </div>
     </div>

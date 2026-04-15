@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/auth.service';
+import { Eye, EyeOff } from "lucide-react";
 
 const Login = ({ isAdmin = false }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const data = await authService.login(email, password);
       // Optional check if trying to log in as admin but not an admin
@@ -25,13 +29,21 @@ const Login = ({ isAdmin = false }) => {
         navigate("/dashboard");
       }
     } catch (err) {
-      console.log(err)
-      setError(err.response?.data?.message || 'Login failed');
+      console.log(err);
+
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        'Something went wrong';
+
+      setError(message);
+    }finally{
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center">
+    <div className="min-h-screen h-auto flex items-center justify-center">
       <div className="max-w-md w-full space-y-8 p-8 rounded-xl shadow-lg border border-border bg-surface" style={{ boxShadow: isAdmin ? 'var(--shadow-primary)' : '' }}>
         <div>
           <h2 className="mt-2 text-center text-3xl font-extrabold text-text">
@@ -48,26 +60,46 @@ const Login = ({ isAdmin = false }) => {
                 type="email" required
                 className="mt-1 block w-full px-4 py-2 bg-input-bg border border-border text-text rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-colors"
                 placeholder="Email address"
-                value={email} onChange={(e) => setEmail(e.target.value)}
+                value={email} onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError('');
+                }}
               />
             </div>
-            <div>
+            <div className="relative">
               <label className="text-sm font-medium text-text-muted">Password</label>
+
               <input
-                type="password" required
-                className="mt-1 block w-full px-4 py-2 bg-input-bg border border-border text-text rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-colors"
+                type={showPassword ? "text" : "password"}
+                required
+                className="mt-1 block w-full px-4 py-2 pr-10 bg-input-bg border border-border text-text rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-colors"
                 placeholder="Password"
-                value={password} onChange={(e) => setPassword(e.target.value)}
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError('');
+                }}
               />
+
+              {/* Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-[38px] text-text-muted hover:text-text"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
           <div>
             <button
+            disabled = {loading}
               type="submit"
               className="w-full flex justify-center py-3 px-4 rounded-md text-white font-semibold transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
               style={{ background: 'var(--gradient-primary)' }}
             >
-              Sign In {isAdmin && 'as Admin'}
+              {loading ? "Please wait. Signing in...." : "Sign In"} 
+
             </button>
           </div>
         </form>
