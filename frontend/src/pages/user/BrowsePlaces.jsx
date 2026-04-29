@@ -5,7 +5,7 @@
 // Uses React 19's useDeferredValue for the search filter. This keeps the
 // input responsive while the (potentially large) list re-renders with
 // filtered results. Without it, typing in the search box would stutter
-// when filtering 266+ Varanasi sites because every keystroke triggers a
+// when filtering many Varanasi sites because every keystroke triggers a
 // full list re-render synchronously.
 // ============================================================================
 
