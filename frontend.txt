@@ -1,0 +1,565 @@
+================================================================================
+TIRTHING — FRONTEND EXPLAINED (For Viva Preparation)
+================================================================================
+Written in simple language so anyone can understand the logic.
+================================================================================
+
+
+WHAT IS THE FRONTEND?
+=====================
+The frontend is everything the user sees and interacts with in their browser.
+It's the "face" of the app — the buttons, forms, pages, colors, and animations.
+Think of it as the dining area of a restaurant — the user interacts with it,
+but the actual cooking (data processing) happens in the backend kitchen.
+
+Our frontend is built with:
+  - React 19    → The library that builds the interactive UI
+  - Vite 8      → The build tool that makes development fast
+  - Tailwind v4 → The styling system (colors, spacing, fonts)
+  - Lucide      → Beautiful icons (like MapPin, Calendar, etc.)
+  - Axios       → Library for making HTTP requests to the backend
+
+The frontend runs at http://localhost:5173 during development.
+
+
+================================================================================
+TEAM MEMBER ASSIGNMENTS
+================================================================================
+
+  PERSON 1 (Satyam): Auth Pages + Auth Context + Protected Routes
+  PERSON 2:          Browse Places + Place Details + Dashboard
+  PERSON 3:          Itinerary Generation + Result Display + WhatsApp Share
+  PERSON 4:          Sidebar + Accessibility + Budget Tracker + Skeletons
+
+================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PERSON 1 — AUTH PAGES + AUTH CONTEXT + PROTECTED ROUTES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES YOU OWN:
+  - context/AuthContext.jsx
+  - api/axios.js
+  - pages/Login.jsx
+  - pages/Signup.jsx
+  - components/ProtectedRoute.jsx
+  - components/Navbar.jsx
+  - pages/Home.jsx
+
+────────────────────────────────────────
+1. AXIOS CONFIGURATION (api/axios.js)
+────────────────────────────────────────
+
+This file creates a single "api" object that all pages use to talk to the
+backend. Two key settings:
+
+  - baseURL: Points to the backend server (from environment variable)
+  - withCredentials: true → Tells the browser "send cookies with every request"
+    This is critical because our auth token lives in a cookie. Without this
+    setting, the browser would NOT send the cookie, and the backend would
+    think we're not logged in.
+
+────────────────────────────────────────
+2. AUTH CONTEXT (context/AuthContext.jsx)
+────────────────────────────────────────
+
+This is the "brain" of the login system on the frontend. It's a React Context
+that provides authentication state to EVERY component in the app.
+
+What it does:
+  1. When the app first loads, it calls GET /api/auth/me
+     → If the cookie is valid → stores user info (name, email, role)
+     → If the cookie is expired → sets user to null
+  2. Provides these things to all components:
+     - user:      The logged-in user's info (or null if not logged in)
+     - isLoading: True while the /me check is running
+     - login():   Updates state after successful login
+     - logout():  Calls the logout API + clears state
+
+  Any component can access this by writing: const { user } = useAuth();
+
+Why we use Context instead of passing data through props:
+  Without Context, we'd have to pass the user object from App → Layout →
+  Sidebar → Button through every single level. With Context, any component
+  at any level can directly access the user. It's like a building's
+  intercom — everyone can hear the announcement without passing it room by room.
+
+────────────────────────────────────────
+3. LOGIN PAGE (pages/Login.jsx)
+────────────────────────────────────────
+
+A form with email and password fields:
+  1. User types their email and password
+  2. On submit, calls the auth service which POSTs to /api/auth/login
+  3. The backend validates credentials and sets the cookie
+  4. Frontend calls login(data.user) to update the AuthContext
+  5. Navigates to /dashboard (or /admin/dashboard if admin)
+
+The same component handles both user login and admin login:
+  If isAdmin=true, it shows "Admin Portal" and checks the role after login.
+
+Password visibility toggle: The eye icon switches the input type between
+"password" (dots) and "text" (visible) — using a showPassword state.
+
+────────────────────────────────────────
+4. PROTECTED ROUTE (components/ProtectedRoute.jsx)
+────────────────────────────────────────
+
+This is a "gate" that wraps all dashboard pages. Before showing any
+protected page:
+
+  Step 1: Check isLoading → if true, show a spinning circle
+          (This prevents the "flash to login" bug — without it, the page
+           would briefly redirect to login before the /me check completes)
+  Step 2: Check user → if null, redirect to /login
+  Step 3: Check role → if the page requires admin and user is not admin,
+          redirect to the appropriate dashboard
+
+This component wraps all routes inside the DashboardLayout in App.jsx.
+
+────────────────────────────────────────
+5. NAVBAR (components/Navbar.jsx)
+────────────────────────────────────────
+
+The top navigation bar on public pages (Home, Login, Signup):
+  - If NOT logged in: Shows "Login" and "Sign Up" buttons
+  - If logged in: Shows "Go to Dashboard" button
+  Uses useAuth() to check the current login state.
+
+────────────────────────────────────────
+6. HOME PAGE (pages/Home.jsx)
+────────────────────────────────────────
+
+The landing page with:
+  - Hero section with a large headline and call-to-action buttons
+  - Features section: 6 cards explaining what Tirthing does
+  - "How It Works" section: 3 steps (Where → Constraints → Plan)
+  - Footer with signup call-to-action
+
+────────────────────────────────────────
+VIVA QUESTIONS FOR PERSON 1:
+────────────────────────────────────────
+Q: What is React Context and why do we use it?
+A: Context is a way to share state across all components without passing 
+   props. We use it so any component can check if the user is logged in.
+
+Q: What does withCredentials: true do?
+A: It tells the browser to include cookies when making requests to the backend.
+   Without it, the auth cookie wouldn't be sent.
+
+Q: What is the "flash to login" bug?
+A: When a logged-in user refreshes, the /me API call takes a moment. Without 
+   checking isLoading, the ProtectedRoute sees user=null and redirects to 
+   login for a split second before /me returns.
+
+Q: How does the password toggle work?
+A: A state variable showPassword switches the input type between "password" 
+   (hidden) and "text" (visible). Clicking the eye icon toggles this state.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PERSON 2 — BROWSE PLACES + PLACE DETAILS + DASHBOARD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES YOU OWN:
+  - pages/user/BrowsePlaces.jsx
+  - pages/user/UserPlaceDetails.jsx
+  - pages/user/Dashboard.jsx
+  - pages/admin/AdminDashboard.jsx
+  - pages/admin/AdminPlaces.jsx
+  - pages/admin/AddPlace.jsx
+  - pages/admin/EditPlace.jsx
+  - pages/admin/PlaceDetails.jsx
+  - services/place.service.js
+  - services/dashboard.service.js
+
+────────────────────────────────────────
+1. BROWSE PLACES (pages/user/BrowsePlaces.jsx)
+────────────────────────────────────────
+
+Shows ALL places in a beautiful card grid. Key features:
+
+  Search with useDeferredValue (React 19):
+    - There's a search box at the top
+    - As you type, React filters the list of places
+    - useDeferredValue is a React 19 feature that keeps the search box 
+      responsive. Here's the problem it solves:
+      
+      Without it: Type "K" → React immediately re-filters 266 places → 
+      the input feels laggy because React is busy filtering while you type.
+      
+      With it: Type "K" → the input updates instantly → React filters the 
+      list a moment later in the background. The input never feels stuck.
+      
+      Think of it like typing on your phone — the keyboard responds instantly,
+      and autocomplete suggestions appear a tiny bit after.
+
+  Skeleton Loading:
+    While places are loading from the server, instead of showing a spinner,
+    we show 6 gray placeholder cards that have the same SHAPE as real cards
+    (image box, title line, subtitle line). This tells the user "cards are 
+    coming" and prevents the page from jumping when data arrives.
+
+  Each card shows: Image, Name, City, Priority badge, Duration, Entry fee
+
+────────────────────────────────────────
+2. USER DASHBOARD (pages/user/Dashboard.jsx)
+────────────────────────────────────────
+
+The first page users see after login. Shows:
+  - 3 stat cards: Total Itineraries, Budget Tracked, Places Explored
+  - Recent trips with thumbnail images
+  - System inventory: How many cities and places are available
+  - Empty state: If no trips yet, shows a "Create Your First Trip" button
+
+Also uses skeleton loading — gray shapes that mirror the real layout.
+
+────────────────────────────────────────
+3. ADMIN DASHBOARD (pages/admin/AdminDashboard.jsx)
+────────────────────────────────────────
+
+Similar to the user dashboard but shows GLOBAL stats:
+  - Total users, itineraries, places in the system
+  - Recently added places (with images and entry fees)
+  - Recent itineraries (with the user's name who created them)
+  - Financial insights: Average entry fee, most expensive place
+  - Priority distribution: How many Must Visit / Recommended / Optional sites
+
+────────────────────────────────────────
+4. ADMIN PLACE MANAGEMENT
+────────────────────────────────────────
+
+AdminPlaces.jsx → Lists all places with edit/delete buttons
+AddPlace.jsx    → Form to add a new place with image upload
+EditPlace.jsx   → Form to update a place (pre-filled with current values)
+PlaceDetails.jsx → Full detail view of a place
+
+────────────────────────────────────────
+VIVA QUESTIONS FOR PERSON 2:
+────────────────────────────────────────
+Q: What is useDeferredValue and why do we use it?
+A: It's a React 19 hook that delays a value update. We use it for search so 
+   the input stays responsive while the large list filters in the background.
+
+Q: What are skeleton screens and why are they better than spinners?
+A: Skeleton screens show gray shapes that match the layout of the real content.
+   Unlike spinners, they tell the user WHAT is loading and prevent layout jumps.
+
+Q: What is the difference between user dashboard and admin dashboard?
+A: User dashboard shows personal stats (your trips, your budget). Admin 
+   dashboard shows global system stats (all users, all places, all trips).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PERSON 3 — ITINERARY GENERATION + RESULT + WHATSAPP SHARE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES YOU OWN:
+  - pages/user/GenerateItinerary.jsx
+  - pages/user/ItineraryResult.jsx
+  - pages/user/MyItineraries.jsx
+  - pages/OfflineItineraries.jsx
+  - services/itinerary.service.js
+  - utils/exportToPdf.js
+
+────────────────────────────────────────
+1. GENERATE ITINERARY (pages/user/GenerateItinerary.jsx)
+────────────────────────────────────────
+
+A form where the user enters:
+  - Destination city (e.g., "Varanasi")
+  - Number of days (1-14)
+  - Total budget in rupees
+  - Group size (1-50)
+
+useTransition (React 19):
+  When the user clicks "Generate Itinerary", the form sends a request to the
+  backend engine. This can take a few seconds.
+  
+  Old way: We used [loading, setLoading] — manually set loading=true before
+  the request and loading=false after. This works but blocks the entire UI.
+  
+  New way: useTransition tells React "this update is not urgent." React keeps
+  the form interactive (you can still edit fields) while the API call runs.
+  isPending becomes true automatically while the request is in flight.
+  
+  Think of it like ordering food at a restaurant — with the old way, you'd 
+  stand frozen at the counter waiting. With useTransition, you can sit down 
+  and browse the menu while your order is being prepared.
+
+Progress bar: Shows completion percentage based on how many fields are filled.
+Travel facts: Right sidebar shows rotating "Did You Know?" pilgrimage tips.
+
+────────────────────────────────────────
+2. ITINERARY RESULT (pages/user/ItineraryResult.jsx)
+────────────────────────────────────────
+
+After generating, this page shows the complete day-by-day plan:
+  - Timeline view with dots and lines connecting each place
+  - Each place shows: image, name, duration, entry fee, Google Maps link
+
+Transport cost display (between sites):
+  Between consecutive sites, we show:
+    🚶 Walk 0.8 km  (if distance < 1.5 km — free)
+    🛺 Rickshaw 3.2 km • ~12 min • ₹68  (if distance < 5 km)
+  This data comes from the engine, which calculates it using OSRM road distances.
+
+WhatsApp Share:
+  Generates a plain text message with the trip summary:
+    "🛕 Varanasi Trip
+     📅 3 days • 👥 4 travelers • 💰 ₹15000
+     Day 1:
+       📍 Kashi Vishwanath
+       📍 Dashashwamedh Ghat
+     ..."
+  Opens WhatsApp with this pre-filled message using: wa.me/?text=...
+  Why? Indian pilgrims use WhatsApp as their primary communication channel.
+  Families share trip plans via WhatsApp groups to coordinate travel.
+
+Budget Tracker Link:
+  A "Track Expenses" button that links to the expense tracking page.
+
+Download PDF:
+  Converts the itinerary to a PDF file using html2canvas.
+
+Offline caching:
+  When you view an itinerary, it saves a copy to localStorage. If you lose
+  internet later, you can still view your saved itineraries.
+
+────────────────────────────────────────
+3. MY ITINERARIES (pages/user/MyItineraries.jsx)
+────────────────────────────────────────
+
+Lists all your generated trip plans as cards. Key feature:
+
+useOptimistic (React 19) for Delete:
+  When you click the delete (trash) icon on a trip card:
+  
+  Old way: Click delete → wait for API → if success, remove from list.
+  The user stares at the card for 500ms wondering "did it work?"
+  
+  New way with useOptimistic:
+    1. Card disappears INSTANTLY (optimistic update)
+    2. API call runs in the background
+    3. If API succeeds → great, the card stays gone
+    4. If API fails → React AUTOMATICALLY puts the card back
+  
+  Think of it like deleting a photo on your phone — it vanishes immediately.
+  If there's an error, it reappears. The user experience feels instant.
+
+────────────────────────────────────────
+4. OFFLINE ITINERARIES (pages/OfflineItineraries.jsx)
+────────────────────────────────────────
+
+When the user is offline and visits /my-itineraries, this page loads instead.
+It scans localStorage for any cached itineraries and displays them.
+This way, users can still reference their trip plans even without internet.
+
+────────────────────────────────────────
+VIVA QUESTIONS FOR PERSON 3:
+────────────────────────────────────────
+Q: What is useTransition and how is it different from a loading state?
+A: useTransition marks an update as "non-urgent." React keeps the UI 
+   interactive while processing. Manual loading state blocks the entire render.
+
+Q: What is useOptimistic?
+A: A React 19 hook that updates the UI immediately before the API call 
+   completes. If the call fails, React reverts the change automatically.
+
+Q: Why WhatsApp share instead of email?
+A: Indian pilgrims coordinate via WhatsApp groups. It's the most used 
+   communication app in India, especially for family trip planning.
+
+Q: How does offline caching work?
+A: When you view an itinerary, it's saved to localStorage. If you lose 
+   internet, the app reads from localStorage instead of calling the API.
+
+Q: How does the transport cost display work?
+A: The engine calculates distance and cost between consecutive sites using 
+   OSRM road data. It attaches this data to each place, and the frontend 
+   displays it as walk/rickshaw badges between timeline entries.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PERSON 4 — SIDEBAR + ACCESSIBILITY + BUDGET TRACKER + SKELETONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES YOU OWN:
+  - components/Sidebar.jsx
+  - components/common/SkeletonCard.jsx
+  - hooks/useAccessibility.js
+  - pages/user/BudgetTracker.jsx
+  - layouts/DashboardLayout.jsx
+  - components/OfflineBanner.jsx
+  - hooks/useNetworkStatus.js
+  - index.css (accessibility section)
+  - App.jsx (routing)
+  - main.jsx (app wrapper)
+
+────────────────────────────────────────
+1. SIDEBAR (components/Sidebar.jsx)
+────────────────────────────────────────
+
+The left navigation panel on all dashboard pages:
+  - Shows the Tirthing logo
+  - Navigation links: Dashboard, Plan Trip, Browse Places, My Trips
+  - Admin gets different links: Dashboard, Manage Places, Add Place
+  - User info at the bottom: Avatar (first letter), name, role
+  - Accessibility toggle button (explained below)
+  - Logout button
+
+Mobile behavior:
+  On small screens, the sidebar is hidden. A hamburger (☰) menu button
+  appears in the top bar. Clicking it slides the sidebar in as an overlay.
+  Clicking outside or on a link closes it.
+
+────────────────────────────────────────
+2. ACCESSIBILITY MODE (hooks/useAccessibility.js)
+────────────────────────────────────────
+
+Designed for elderly pilgrim users (65+) who may struggle with:
+  - Small text → Hard to read
+  - Fast animations → Disorienting
+  - Small buttons → Hard to tap on mobile
+
+When the user clicks "A11y: Off" in the sidebar, it toggles to "A11y: On":
+  1. Adds "text-lg" class to the HTML element → All text gets bigger
+  2. Sets a CSS variable that increases button padding → Bigger tap targets
+  3. Disables all animations and transitions → No distracting movement
+
+The preference is saved in localStorage so it survives page refreshes.
+
+CSS rules in index.css respond to the accessibility state:
+  html[data-reduce-motion="true"] * {
+    animation-duration: 0.01ms !important;   → kills all animations
+    transition-duration: 0.01ms !important;  → kills all transitions
+  }
+
+────────────────────────────────────────
+3. SKELETON CARDS (components/common/SkeletonCard.jsx)
+────────────────────────────────────────
+
+Placeholder loading components that show BEFORE real data arrives.
+Three variants:
+
+  "card" variant (used in BrowsePlaces):
+    Gray rectangle for the image + gray lines for title and subtitle
+  
+  "stat" variant (used in Dashboard):
+    Gray circle for the icon + gray lines for the number
+  
+  "trip" variant (used in MyItineraries):
+    Gray lines for title + gray box for trip details
+
+Why skeletons instead of a spinning circle?
+  A spinner says "something is loading" but gives no hint about WHAT.
+  A skeleton shows the exact SHAPE of what's coming — the user's brain
+  already expects a card with an image and text. When real data arrives,
+  it feels natural instead of jumpy.
+
+────────────────────────────────────────
+4. BUDGET TRACKER (pages/user/BudgetTracker.jsx)
+────────────────────────────────────────
+
+Accessible from ItineraryResult via the "Track Expenses" button.
+Route: /trip/:itineraryId/tracker
+
+What it does:
+  - Shows the planned budget from the itinerary
+  - User can add expenses: category (food, transport, offering, etc.), 
+    amount, and optional note
+  - Shows a progress bar: green → yellow at 90% → red when over budget
+  - Category breakdown: How much spent on food vs transport vs offerings
+  - All data stored in localStorage (works offline, no backend needed)
+
+Why localStorage for expenses?
+  - Pilgrims may be at remote temples with no internet
+  - Expense tracking is personal — doesn't need to be shared or synced
+  - No backend changes required — simple and reliable
+
+The 90% warning threshold gives pilgrims time to adjust their spending
+for the remaining days without panicking.
+
+────────────────────────────────────────
+5. DASHBOARD LAYOUT (layouts/DashboardLayout.jsx)
+────────────────────────────────────────
+
+The "frame" that wraps all dashboard pages:
+  - Sidebar on the left (hidden on mobile)
+  - Header on top with date and greeting
+  - Main content area with the actual page (via React Router's <Outlet>)
+  - Mobile: hamburger menu + slide-out sidebar overlay
+
+────────────────────────────────────────
+6. APP ROUTING (App.jsx)
+────────────────────────────────────────
+
+Defines WHICH page shows for WHICH URL:
+
+  Public routes (anyone can access):
+    /           → Home page
+    /login      → User login
+    /admin-login → Admin login
+    /signup     → User registration
+    /admin-signup → Admin registration
+
+  Protected routes (must be logged in):
+    /dashboard           → User dashboard
+    /places              → Browse places
+    /places/:id          → Place detail
+    /generate-itinerary  → Create trip (shows offline message if no internet)
+    /itinerary/:id       → View generated trip
+    /my-itineraries      → List of your trips (shows offline version if no internet)
+    /trip/:id/tracker    → Budget expense tracker
+
+  Admin-only routes (must be admin):
+    /admin/dashboard     → Admin dashboard
+    /admin/places        → Manage places
+    /admin/add-place     → Add new place
+    /admin/places/:id    → Place detail (admin view)
+    /admin/places/edit/:id → Edit place
+
+────────────────────────────────────────
+VIVA QUESTIONS FOR PERSON 4:
+────────────────────────────────────────
+Q: Why did we build an accessibility mode?
+A: Our target users include elderly pilgrims (65+) who may struggle with 
+   small text, rapid animations, and tiny buttons. The toggle makes the 
+   app usable for them.
+
+Q: Where is the accessibility preference stored?
+A: In localStorage under the key "a11y_mode". This is one of the few 
+   appropriate uses of localStorage — it's not sensitive data.
+
+Q: Why store budget expenses in localStorage instead of the database?
+A: Pilgrims may be at remote sites with no internet. localStorage works 
+   offline. Also, expenses are personal data that doesn't need syncing.
+
+Q: What is the DashboardLayout?
+A: A layout component that provides the sidebar, header, and content area 
+   for all protected pages. It uses React Router's Outlet to render the 
+   specific page content.
+
+Q: How does the offline detection work?
+A: The useNetworkStatus hook listens to the browser's "online" and "offline" 
+   events. When offline, certain pages swap to offline-friendly versions.
+
+
+================================================================================
+DESIGN SYSTEM (index.css)
+================================================================================
+
+All colors and styling follow a warm saffron theme:
+
+  Background:   Saffron cream (#FFF4D6)
+  Surface:      Saffron ivory (#FFF9E6) — cards, panels
+  Primary:      Saffron orange (#FB923C) — buttons, links, accents
+  Text:         Dark warm brown (#32261E)
+  Borders:      Warm semi-transparent (#B47828/25%)
+  Gradients:    Saffron to deep orange (for buttons)
+
+Dark mode is NOT used — the saffron theme is consistent.
+Tailwind CSS v4 means ALL theme config is in CSS, NOT in a JS config file.
+
+================================================================================

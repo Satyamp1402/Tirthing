@@ -1,0 +1,560 @@
+================================================================================
+TIRTHING — BACKEND EXPLAINED (For Viva Preparation)
+================================================================================
+Written in simple language so anyone can understand the logic.
+================================================================================
+
+
+WHAT IS THE BACKEND?
+====================
+The backend is the "brain" of Tirthing. It runs on a server (not in the user's
+browser). Think of it as the kitchen in a restaurant — the user (waiter) sends
+an order (request), the kitchen (backend) processes it and sends back the food
+(response). The user never sees the kitchen directly.
+
+Our backend is built with:
+  - Node.js + Express  → The server that listens for requests
+  - MongoDB + Mongoose  → The database where we store all data
+  - Cloudinary         → Cloud storage for place images
+  - OSRM               → Free road distance service (like Google Maps directions)
+
+The backend runs at something like http://localhost:5000 during development.
+
+
+================================================================================
+TEAM MEMBER ASSIGNMENTS
+================================================================================
+
+  PERSON 1 (Satyam):  Authentication System + Server Setup
+  PERSON 2:           Place Management + Database Models
+  PERSON 3:           Itinerary Engine (the core algorithm)
+  PERSON 4:           Dashboard APIs + OSRM Integration
+
+================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PERSON 1 — AUTHENTICATION SYSTEM + SERVER SETUP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES YOU OWN:
+  - server.js
+  - controllers/auth.controller.js
+  - middlewares/auth.middleware.js
+  - middlewares/admin.middleware.js
+  - routes/auth.routes.js
+  - models/user.model.js
+  - config/db.js (if exists)
+
+────────────────────────────────────────
+1. SERVER SETUP (server.js)
+────────────────────────────────────────
+
+This is the starting point of the entire backend. When you run "node server.js",
+this file:
+
+  Step 1: Loads environment variables from the .env file (database URL, secrets)
+  Step 2: Creates an Express app (the web server)
+  Step 3: Configures CORS — tells the server which websites are allowed to
+          talk to it. We allow localhost:5173 (development) and
+          tirthing.vercel.app (production). The "credentials: true" setting
+          is critical — it tells the browser "yes, send cookies with requests."
+  Step 4: Adds cookie-parser middleware — this reads cookies from incoming
+          requests and makes them available as req.cookies.token
+  Step 5: Registers all routes:
+            /api/auth      → login, signup, logout, session check
+            /api/place     → add, edit, delete, view places
+            /api/itinerary → generate and view trip plans
+            /api/dashboard → stats for user and admin dashboards
+  Step 6: Connects to MongoDB using the connection string from .env
+  Step 7: Starts listening on port 5000
+
+────────────────────────────────────────
+2. USER MODEL (models/user.model.js)
+────────────────────────────────────────
+
+This defines WHAT a user looks like in our database:
+
+  - name     (text, required)      → "Satyam Sharma"
+  - email    (text, required, unique) → "satyam@example.com"
+  - password (text, required)      → Stored as a hash, NOT plain text
+  - role     (text: 'user' or 'admin') → Controls what pages they can access
+  - timestamps                     → Automatically adds createdAt and updatedAt
+
+The "unique" on email means no two users can have the same email.
+The "enum" on role means only 'user' or 'admin' are valid values.
+
+────────────────────────────────────────
+3. AUTHENTICATION CONTROLLER (controllers/auth.controller.js)
+────────────────────────────────────────
+
+This is the heart of the login system. It has 4 functions:
+
+A) SIGNUP (POST /api/auth/signup)
+   When someone creates a new account:
+     1. Check if the email already exists → if yes, return error
+     2. Hash the password using bcrypt with 10 rounds of salting
+        (Hashing means converting "password123" into a random-looking string
+         like "$2a$10$xYz..." — even we cannot reverse it back to "password123")
+     3. Save the new user to MongoDB
+     4. Create a JWT token (a signed pass that says "this person is User #123")
+     5. Put that token inside an httpOnly cookie and send it back
+        The browser stores this cookie automatically
+
+B) LOGIN (POST /api/auth/login)
+   When someone logs in:
+     1. Find the user by email → if not found, return "invalid credentials"
+     2. Compare the entered password with the stored hash using bcrypt
+     3. If they match → create JWT → set as cookie → send user info back
+     4. If they don't match → return "invalid credentials"
+        (We say "invalid credentials" for BOTH wrong email and wrong password
+         so hackers can't figure out which one is wrong)
+
+C) GET ME (GET /api/auth/me)
+   When the user refreshes the page:
+     1. The browser automatically sends the cookie with the request
+     2. The auth middleware reads the cookie and decodes the JWT
+     3. This function looks up the user by their ID from the decoded token
+     4. Returns their name, email, role (but NOT the password)
+     This is how the app "remembers" you after a refresh.
+
+D) LOGOUT (POST /api/auth/logout)
+   When the user clicks logout:
+     1. Set the cookie to empty with maxAge: 0 (expires immediately)
+     2. The browser deletes the cookie
+     3. Next time they visit, GET /me will fail → they're redirected to login
+
+WHY COOKIES INSTEAD OF LOCALSTORAGE:
+  Old way: Token was stored in the browser's localStorage. Any JavaScript
+  on the page could read it. If a hacker injected a script (called XSS),
+  they could steal the token and log in as that user from anywhere.
+
+  New way: Token is in an httpOnly cookie. JavaScript CANNOT read httpOnly
+  cookies at all. Only the browser sends them automatically. Even if a
+  hacker injects a script, they cannot access the token. Much safer.
+
+────────────────────────────────────────
+4. AUTH MIDDLEWARE (middlewares/auth.middleware.js)
+────────────────────────────────────────
+
+This is a "gatekeeper" that runs BEFORE any protected route.
+
+How it works:
+  1. Read the token from req.cookies.token
+  2. If no token → return 401 (unauthorized)
+  3. If token exists → decode it using jwt.verify() with the secret key
+  4. If decoding fails (expired or tampered) → return 401
+  5. If valid → attach the user's ID and role to the request (req.user)
+     → let the request continue to the actual controller
+
+Every protected route (dashboard, itinerary, etc.) goes through this first.
+
+────────────────────────────────────────
+5. ADMIN MIDDLEWARE (middlewares/admin.middleware.js)
+────────────────────────────────────────
+
+An additional check AFTER auth middleware. Simply checks:
+  "Is req.user.role === 'admin'?"
+  If yes → continue. If no → return 403 (forbidden).
+
+Used for admin-only routes like managing places.
+
+────────────────────────────────────────
+VIVA QUESTIONS FOR PERSON 1:
+────────────────────────────────────────
+Q: Why httpOnly cookies instead of localStorage?
+A: httpOnly cookies cannot be read by JavaScript, protecting against XSS attacks.
+
+Q: What is bcrypt and why do we use salting?
+A: Bcrypt hashes passwords one-way. Salting adds random data so even identical 
+   passwords produce different hashes, preventing rainbow table attacks.
+
+Q: What is JWT?
+A: JSON Web Token — a signed string containing user ID and role. The server 
+   creates it, the browser stores it as a cookie, and sends it on every request.
+
+Q: What does CORS do?
+A: Cross-Origin Resource Sharing — controls which websites can make requests 
+   to our API. We only allow our own frontend domains.
+
+Q: What is the /me endpoint for?
+A: When the user refreshes the page, the frontend calls /me to check if their 
+   session (cookie) is still valid. If yes, they stay logged in. If not, they 
+   get redirected to login.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PERSON 2 — PLACE MANAGEMENT + DATABASE MODELS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES YOU OWN:
+  - models/place.model.js
+  - models/itinerary.model.js
+  - controllers/place.controller.js
+  - routes/place.routes.js
+  - utils/uploadToCloudinary.js
+  - utils/deleteFromCloudinary.js
+
+────────────────────────────────────────
+1. PLACE MODEL (models/place.model.js)
+────────────────────────────────────────
+
+This defines what a "place" (pilgrimage site) looks like in our database:
+
+  Basic Info:
+  - name          → "Kashi Vishwanath Temple"
+  - city          → "Varanasi"
+  - image         → URL from Cloudinary (cloud image storage)
+  - publicId      → Cloudinary's ID for deleting the image later
+  - description   → A paragraph about the place
+
+  Location:
+  - latitude      → 25.3109 (used by the engine for route planning)
+  - longitude     → 83.0107
+
+  Planning Data:
+  - visitDuration → 1.5 (hours needed to visit this place)
+  - entryFee      → 0 (free) or 50 (rupees per person)
+  - priority      → 1 = Must Visit, 2 = Recommended, 3 = Optional
+
+  Scheduling Hints (used by the engine):
+  - time_slot     → 'dawn' (5 AM ghats), 'morning' (temples), 
+                     'aarti' (sunset ritual), or 'anytime'
+  - theme_group   → 'ghats', 'temples', 'historic', 'nature', or 'other'
+  - best_season   → "October to February" (display only, not enforced)
+
+────────────────────────────────────────
+2. ITINERARY MODEL (models/itinerary.model.js)
+────────────────────────────────────────
+
+This stores a generated trip plan:
+
+  - user         → Which user created this (links to User model)
+  - destination  → "Varanasi"
+  - days         → 3
+  - budget       → 5000 (rupees)
+  - groupSize    → 4 (people)
+  - budgetTier   → 'budget', 'comfort', or 'premium' (auto-detected)
+  - plan         → Array of days, each containing an array of places
+                   Each place has all the info needed to display it
+
+  Example of the plan structure:
+  plan: [
+    { day: 1, places: [{ name: "Kashi Vishwanath", entryFee: 0, ... }, ...] },
+    { day: 2, places: [{ name: "Sarnath", entryFee: 50, ... }, ...] }
+  ]
+
+────────────────────────────────────────
+3. PLACE CONTROLLER (controllers/place.controller.js)
+────────────────────────────────────────
+
+CRUD operations — Create, Read, Update, Delete:
+
+A) ADD PLACE (POST /api/place/add)
+   Admin uploads a new place with an image:
+     1. Check if an image file was attached → if not, return error
+     2. Upload the image to Cloudinary (cloud storage) → get back a URL
+     3. Save the place to MongoDB with all the details + image URL
+   Why Cloudinary? Storing images directly in our database would make it
+   huge and slow. Cloudinary is optimized for serving images fast.
+
+B) GET ALL PLACES (GET /api/place/all)
+   Simply returns every place from the database. Used by the Browse page.
+
+C) GET PLACE BY ID (GET /api/place/:id)
+   Returns a single place by its MongoDB ID. Used for the detail view.
+
+D) UPDATE PLACE (PUT /api/place/:id)
+   Admin edits a place:
+     1. Find the existing place
+     2. If a new image was uploaded:
+        - Upload new image to Cloudinary
+        - Delete the OLD image from Cloudinary (so we don't waste storage)
+     3. Update the fields in the database
+
+E) DELETE PLACE (DELETE /api/place/:id)
+   Admin removes a place:
+     1. Find the place
+     2. Delete its image from Cloudinary
+     3. Delete the place from MongoDB
+
+────────────────────────────────────────
+VIVA QUESTIONS FOR PERSON 2:
+────────────────────────────────────────
+Q: Why store images in Cloudinary instead of MongoDB?
+A: Images are large binary files. MongoDB is designed for structured data. 
+   Cloudinary serves images from a global CDN, which is much faster.
+
+Q: What is the publicId used for?
+A: It's Cloudinary's identifier for the image. When we delete a place, we use 
+   the publicId to also delete the image from Cloudinary so it doesn't take up 
+   space forever.
+
+Q: What does "priority" mean for places?
+A: 1 = Must Visit (like Kashi Vishwanath), 2 = Recommended, 3 = Optional.
+   The engine picks Priority 1 sites first when building an itinerary.
+
+Q: What is time_slot?
+A: It tells the engine WHEN to schedule this site. Dawn = early morning rituals,
+   Aarti = sunset ceremony at 6:30 PM, Morning = temple hours, Anytime = flexible.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PERSON 3 — ITINERARY ENGINE (The Core Algorithm)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES YOU OWN:
+  - utils/engine.js
+  - controllers/itinerary.controller.js
+  - routes/itinerary.routes.js
+
+────────────────────────────────────────
+1. THE ENGINE — HOW IT CREATES A TRIP PLAN (utils/engine.js)
+────────────────────────────────────────
+
+This is the most complex part of the project. It takes the user's inputs
+(where, how many days, budget, group size) and produces a complete day-by-day
+travel plan. The algorithm works in 5 phases:
+
+PHASE 1 — BUDGET ANALYSIS
+   First, we figure out what the user can afford.
+   We calculate: budget ÷ groupSize ÷ days = money per person per day
+   
+   Example: ₹15,000 budget ÷ 3 people ÷ 3 days = ₹1,667 per person per day
+   
+   Then we classify them into a tier:
+     Under ₹1,000/day → "Budget" (hostel, street food, walking)
+     Under ₹3,500/day → "Comfort" (hotel, restaurants, rickshaws)
+     Above ₹3,500/day → "Premium" (heritage hotel, private transport)
+   
+   Each tier has fixed daily costs (accommodation + food + misc).
+   We subtract these from the daily budget — what's left is the "flexible
+   budget" available for entry fees and transport.
+   
+   If the flexible budget is negative (meaning the total budget is too low
+   to even cover basic stay and food), the engine returns an error with a
+   suggestion: "Your budget is too low. Minimum for budget tier is ₹X."
+
+PHASE 2 — SITE SELECTION (Greedy Algorithm)
+   Now we pick which places the user will visit:
+     1. Sort ALL sites in the city by priority (Must Visit first)
+     2. For each site, check: "Can we afford the entry fee?"
+        - Entry fee × group size must fit within remaining flexible budget
+     3. If affordable → include it, subtract the cost
+     4. Continue until budget runs out or all sites are picked
+   
+   This is called a "greedy" algorithm because at each step, it picks the
+   best available option (highest priority, cheapest fee).
+
+PHASE 3 — ROAD DATA FETCH (OSRM)
+   Before we group sites into days, we need to know how far apart they are.
+   
+   We send all the site coordinates to OSRM (Open Source Routing Machine) —
+   a free service that gives us real road distances and travel times.
+   
+   Why not just use straight-line distance? Because in Varanasi's old city,
+   a place that's 1 km away as the crow flies might be 3-4 km by road
+   through winding lanes. OSRM gives realistic road-based distances.
+   
+   If OSRM is offline, we fall back to Haversine formula (math-based
+   straight-line distance with a speed estimate).
+
+PHASE 4 — CLUSTERING (Grouping Sites into Days)
+   We want sites that are close together to be on the same day (so the user
+   doesn't zigzag across the city).
+   
+   Algorithm:
+     1. Pick "anchor" sites — the site closest to the center of all sites
+     2. For each day, find the unassigned site closest to the anchor
+     3. Keep adding nearby sites to that day until the day is "full"
+        (total visit hours + travel time ≤ available hours in a day)
+     4. Move to the next day with a new anchor
+   
+   This ensures Day 1 might be "all ghats along the river" and Day 2
+   might be "temples in the old city" — logical, real-world groupings.
+
+PHASE 5 — SCHEDULING (Time Slots + Transport)
+   For each day, we assign specific time windows:
+     1. Dawn sites (Ganga Aarti) are scheduled at 5:00 AM
+     2. Morning sites (temples) start at 7:00 AM
+     3. Anytime sites fill the gaps
+     4. Aarti sites are ALWAYS at 6:30 PM (sunset ritual — non-negotiable)
+   
+   Within each group, we use "Nearest Neighbor Routing" — starting from
+   the first site, we always visit the closest unvisited site next.
+   This minimizes travel time within a day.
+   
+   Transport costs:
+     Between each pair of consecutive sites, we calculate:
+       - If distance < 1.5 km → Walk (free)
+       - If distance < 5 km → Cycle rickshaw (₹30 base + ₹12/km)
+       - If distance > 5 km → Auto rickshaw (₹40 base + ₹15/km)
+     
+     These per-hop costs are attached to each place object so the frontend
+     can show "🚶 Walk 0.8 km" or "🛺 Rickshaw 3.2 km • ₹68" between sites.
+
+────────────────────────────────────────
+2. ITINERARY CONTROLLER (controllers/itinerary.controller.js)
+────────────────────────────────────────
+
+A) GENERATE ITINERARY (POST /api/itinerary/generate)
+     1. Find all places in the requested city
+     2. Run the engine → get the day-by-day plan
+     3. If engine returns an error (budget too low) → send error + suggestion
+     4. If engine returns a plan → save it to MongoDB → return to frontend
+
+B) MY ITINERARIES (GET /api/itinerary/my)
+     Returns all itineraries created by the logged-in user, newest first.
+
+C) GET BY ID (GET /api/itinerary/:id)
+     Returns a single itinerary by its database ID.
+
+D) DELETE ITINERARY (DELETE /api/itinerary/:id)
+     1. Find the itinerary
+     2. Check that the logged-in user is the OWNER (security — can't delete 
+        someone else's trips)
+     3. If owner → delete it. If not → return 403 forbidden.
+
+────────────────────────────────────────
+VIVA QUESTIONS FOR PERSON 3:
+────────────────────────────────────────
+Q: What is a greedy algorithm?
+A: An algorithm that makes the best choice at each step. Here, we always pick 
+   the highest-priority, affordable site next. It doesn't guarantee the absolute 
+   best solution, but it's fast and produces good results.
+
+Q: Why use OSRM instead of Google Maps?
+A: OSRM is free and open-source, no API key needed. Google Maps charges money 
+   per request. For an educational project, OSRM is perfect.
+
+Q: What is the Nearest Neighbor algorithm?
+A: A routing strategy where you always go to the closest unvisited place next. 
+   It's simple and effective for within-day routing.
+
+Q: How does the engine handle "budget too low" cases?
+A: It calculates the minimum budget needed for the cheapest tier, adds it to 
+   the error response, so the frontend can tell the user "increase budget to 
+   at least ₹X."
+
+Q: Why are Aarti sites always at 6:30 PM?
+A: Evening Aarti (like Ganga Aarti at Dashashwamedh Ghat) happens at sunset 
+   daily. It's a fixed religious ceremony — we can't move it to 2 PM.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PERSON 4 — DASHBOARD APIs + OSRM INTEGRATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES YOU OWN:
+  - controllers/dashboard.controller.js
+  - routes/dashboard.routes.js
+  - utils/osrm.js
+
+────────────────────────────────────────
+1. OSRM MODULE (utils/osrm.js)
+────────────────────────────────────────
+
+OSRM (Open Source Routing Machine) gives us real road distances between places.
+
+How it works:
+  1. We send ALL site coordinates in one API call (called the "table" endpoint)
+  2. OSRM returns an N×N matrix — every site to every other site
+     Example for 3 sites: a 3×3 grid where matrix[0][1] = distance from
+     site 0 to site 1 by road
+
+  We get TWO matrices:
+    - Distance matrix (in kilometers) — used for transport cost calculation
+    - Duration matrix (in minutes) — used for scheduling and clustering
+
+  Why one call instead of many?
+    For 20 sites, we'd need 20×20 = 400 individual calls without the table
+    endpoint. With it, we make exactly 1 call. Much faster and more efficient.
+
+  Fallback: If OSRM's server is down (it's a public free service), we use
+  the Haversine formula — a math formula that calculates straight-line distance
+  between two latitude/longitude points on Earth. Not as accurate as road
+  distance, but good enough as a backup.
+
+────────────────────────────────────────
+2. DASHBOARD CONTROLLER (controllers/dashboard.controller.js)
+────────────────────────────────────────
+
+A) USER DASHBOARD (GET /api/dashboard/user)
+   Shows stats for the logged-in user:
+     - Total itineraries they've created
+     - Total budget across all their trips
+     - Number of places they've "explored"
+     - Their 3 most recent trips (with thumbnail images)
+     - System-wide stats: how many cities and places are available
+   
+   Uses MongoDB Aggregation Pipeline — think of it as SQL GROUP BY.
+   We group all the user's itineraries and SUM their budgets, COUNT
+   their places, etc. in one database query instead of many.
+
+B) ADMIN DASHBOARD (GET /api/dashboard/admin)
+   Shows global stats for admins:
+     - Total users, itineraries, and places in the entire system
+     - 3 most recently added places (with images)
+     - 3 most recent itineraries (with the user's name and email)
+     - Average entry fee across all places
+     - Most expensive place's entry fee
+     - Priority distribution (how many Priority 1, 2, 3 sites exist)
+   
+   Uses Promise.all to run 6 database queries simultaneously instead
+   of one after another — this makes the dashboard load much faster.
+
+────────────────────────────────────────
+VIVA QUESTIONS FOR PERSON 4:
+────────────────────────────────────────
+Q: What is the OSRM table endpoint?
+A: It takes a list of coordinates and returns a distance/time matrix for all 
+   pairs in a single API call. Much more efficient than individual route calls.
+
+Q: What is Haversine formula?
+A: A mathematical formula that calculates the shortest distance between two 
+   points on Earth given their latitude and longitude. It assumes the Earth 
+   is a sphere. Less accurate than road distance but works without any API.
+
+Q: What is MongoDB Aggregation?
+A: A way to process data in stages (like a pipeline). We use $match to filter, 
+   $group to combine, $sum to total up values — all in one database query.
+
+Q: Why use Promise.all in the admin dashboard?
+A: It runs multiple database queries at the same time (in parallel) instead of 
+   waiting for each one to finish before starting the next. This makes the 
+   response 3-4x faster.
+
+Q: What does the distance matrix look like?
+A: A grid where row i, column j gives the road distance from site i to site j.
+   For 5 sites, it's a 5×5 grid with 25 values. Diagonal is 0 (distance from 
+   a place to itself).
+
+
+================================================================================
+COMPLETE API ROUTE LIST
+================================================================================
+
+AUTH ROUTES (/api/auth):
+  POST /signup   → Create account + set cookie
+  POST /login    → Verify password + set cookie
+  GET  /me       → Check if cookie is valid + return user info
+  POST /logout   → Clear the cookie
+
+PLACE ROUTES (/api/place):
+  GET    /all    → List all places
+  GET    /:id    → Get one place by ID
+  POST   /add    → Admin: add a new place with image
+  PUT    /:id    → Admin: update a place
+  DELETE /:id    → Admin: delete a place + its image
+
+ITINERARY ROUTES (/api/itinerary):
+  POST   /generate → Create a new trip plan using the engine
+  GET    /my       → List all trips for the logged-in user
+  GET    /:id      → Get a single trip by ID
+  DELETE /:id      → Delete a trip (owner only)
+
+DASHBOARD ROUTES (/api/dashboard):
+  GET /user  → User's personal stats
+  GET /admin → System-wide admin stats
+
+================================================================================

@@ -1,0 +1,86 @@
+[
+  {
+    "name": "Kashi Vishwanath Temple",
+    "priority": 1,
+    "time_slot": "dawn",
+    "theme_group": "temples",
+    "visitDuration": 2,
+    "entryFee": 0,
+    "best_season": "October to March"
+  },
+  {
+    "name": "Dashashwamedh Ghat",
+    "priority": 1,
+    "time_slot": "aarti",
+    "theme_group": "ghats",
+    "visitDuration": 1.5,
+    "entryFee": 0,
+    "best_season": "October to March"
+  },
+  {
+    "name": "Manikarnika Ghat",
+    "priority": 1,
+    "time_slot": "morning",
+    "theme_group": "ghats",
+    "visitDuration": 1,
+    "entryFee": 0
+  },
+  {
+    "name": "Sarnath",
+    "priority": 1,
+    "time_slot": "morning",
+    "theme_group": "historic",
+    "visitDuration": 3,
+    "entryFee": 40,
+    "best_season": "October to February"
+  },
+  {
+    "name": "Tulsi Manas Temple",
+    "priority": 2,
+    "time_slot": "morning",
+    "theme_group": "temples",
+    "visitDuration": 1,
+    "entryFee": 0
+  },
+  {
+    "name": "Ramnagar Fort",
+    "priority": 2,
+    "time_slot": "anytime",
+    "theme_group": "historic",
+    "visitDuration": 2,
+    "entryFee": 15,
+    "best_season": "October to March"
+  },
+  {
+    "name": "Assi Ghat",
+    "priority": 2,
+    "time_slot": "dawn",
+    "theme_group": "ghats",
+    "visitDuration": 1,
+    "entryFee": 0
+  },
+  {
+    "name": "Durga Temple",
+    "priority": 2,
+    "time_slot": "morning",
+    "theme_group": "temples",
+    "visitDuration": 1,
+    "entryFee": 0
+  },
+  {
+    "name": "Sankat Mochan Hanuman Temple",
+    "priority": 2,
+    "time_slot": "morning",
+    "theme_group": "temples",
+    "visitDuration": 1,
+    "entryFee": 0
+  },
+  {
+    "name": "Bharat Mata Temple",
+    "priority": 2,
+    "time_slot": "anytime",
+    "theme_group": "temples",
+    "visitDuration": 0.75,
+    "entryFee": 0
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "name": "tirthing-enrich",
+  "version": "1.0.0",
+  "description": "Data enrichment scripts for seeding pilgrimage sites from OSM + Wikipedia",
+  "type": "module",
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "mongoose": "^9.3.1"
+  }
+}

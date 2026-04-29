@@ -16,7 +16,11 @@ export const itineraryService = {
     return response.data;
   },
   getItineraryById: async (id) => {
-  const response = await api.get(`/itinerary/${id}`);
-  return response.data;
-}
+    const response = await api.get(`/itinerary/${id}`);
+    return response.data;
+  },
+  deleteItinerary: async (id) => {
+    const response = await api.delete(`/itinerary/${id}`);
+    return response.data;
+  }
 };

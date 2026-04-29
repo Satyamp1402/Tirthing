@@ -1,0 +1,330 @@
+================================================================================
+TIRTHING — NEW CHANGES MADE (Recent Session)
+================================================================================
+This document lists every change we made in the latest development session.
+Written so anyone can understand what changed and why.
+================================================================================
+
+
+OVERVIEW OF WHAT WE DID
+========================
+We made two major categories of changes:
+
+  1. SECURITY UPGRADE — Moved the login system from localStorage to cookies
+  2. NEW FEATURES — Added 6 new features using React 19's latest capabilities
+
+Everything below was tested and verified:
+  - Backend syntax check: PASSED
+  - Frontend production build: PASSED (0 errors)
+
+
+================================================================================
+CHANGE 1: AUTHENTICATION MIGRATION (localStorage → Cookies)
+================================================================================
+
+WHAT CHANGED:
+  Before: When a user logged in, the backend sent a token in the response body.
+          The frontend saved it in localStorage and attached it to every request.
+  After:  The backend now sets the token as an httpOnly cookie. The browser
+          handles everything automatically — the frontend never touches the token.
+
+WHY:
+  localStorage is readable by any script on the page. If a hacker injects
+  malicious JavaScript (called XSS), they could steal the token and pretend
+  to be the user. httpOnly cookies are invisible to JavaScript entirely —
+  even if a hacker injects a script, they CANNOT access the token.
+
+FILES CHANGED:
+
+  BACKEND:
+  --------
+  auth.controller.js
+    - Added sendTokenCookie() function that puts the JWT in a cookie
+    - Added COOKIE_OPTIONS with httpOnly, secure, sameSite settings
+    - Added getMe() function — frontend calls this to check "am I logged in?"
+    - Added logout() function — clears the cookie
+
+  auth.middleware.js
+    - Changed from: reading token from "Authorization" header
+    - Changed to: reading token from req.cookies.token
+
+  auth.routes.js
+    - Added GET /me route (session validation)
+    - Added POST /logout route (cookie clearing)
+
+  server.js
+    - Added cookie-parser middleware
+    - Added credentials: true to CORS config
+
+  FRONTEND:
+  ---------
+  context/AuthContext.jsx (NEW FILE)
+    - Created a React Context that manages login state for the entire app
+    - On page load, calls /api/auth/me to check if the cookie is valid
+    - Provides user, isLoading, login(), logout() to all components
+
+  api/axios.js
+    - Removed the old token interceptor
+    - Added withCredentials: true (browser sends cookies automatically)
+
+  Login.jsx
+    - Removed localStorage.setItem('token')
+    - Now calls login(data.user) from AuthContext
+
+  Signup.jsx
+    - Same changes as Login.jsx
+
+  Navbar.jsx
+    - Changed from localStorage.getItem('user') to useAuth()
+
+  Sidebar.jsx
+    - Changed from localStorage.getItem('user') to useAuth()
+
+  ProtectedRoute.jsx
+    - Changed from checking localStorage to checking AuthContext
+    - Added loading state to prevent flash-to-login bug
+
+  main.jsx
+    - Wrapped entire app in AuthProvider
+
+
+================================================================================
+CHANGE 2: useTransition in GenerateItinerary
+================================================================================
+
+FILE: pages/user/GenerateItinerary.jsx
+
+WHAT CHANGED:
+  Before: Used useState for loading → [loading, setLoading]
+  After:  Used useTransition → [isPending, startTransition]
+
+WHY:
+  useTransition is a React 19 feature. It marks the API call as "non-urgent"
+  so React keeps the form responsive while waiting for the response.
+  The user can still edit form fields during generation.
+
+ALSO:
+  - Removed ~280 lines of commented-out dead code
+  - Added aria-labels for accessibility
+
+
+================================================================================
+CHANGE 3: useDeferredValue Search in BrowsePlaces
+================================================================================
+
+FILE: pages/user/BrowsePlaces.jsx
+
+WHAT CHANGED:
+  Before: No search functionality
+  After:  Added a search box with useDeferredValue
+
+HOW IT WORKS:
+  - User types in the search box
+  - searchInput updates immediately (input stays responsive)
+  - deferredSearch updates a moment later (list re-filters in background)
+  - While the deferred value catches up, the list dims slightly (opacity 0.7)
+
+ALSO:
+  - Added skeleton loading (6 gray placeholder cards while data loads)
+  - Added keyboard accessibility (Enter key to open a place)
+  - Added lazy image loading
+
+
+================================================================================
+CHANGE 4: useOptimistic Delete in MyItineraries
+================================================================================
+
+FILE: pages/user/MyItineraries.jsx
+
+WHAT CHANGED:
+  Before: No delete functionality
+  After:  Delete button with instant visual feedback
+
+HOW IT WORKS:
+  1. User clicks the trash icon on a trip card
+  2. Card disappears IMMEDIATELY (optimistic update)
+  3. API delete call runs in the background
+  4. If API fails → card reappears automatically (React reverts)
+
+SUPPORTING CHANGES:
+  - itinerary.service.js: Added deleteItinerary() method
+  - itinerary.controller.js: Added DELETE handler with ownership check
+  - itinerary.routes.js: Added DELETE /:id route
+
+ALSO:
+  - Added skeleton loading (4 gray placeholder cards)
+  - Removed ~65 lines of commented-out dead code
+
+
+================================================================================
+CHANGE 5: Skeleton Loading Screens
+================================================================================
+
+NEW FILE: components/common/SkeletonCard.jsx
+
+Three variants:
+  - "card" → image + title + subtitle (for BrowsePlaces)
+  - "stat" → icon circle + number (for Dashboard stat cards)
+  - "trip" → full trip card (for MyItineraries)
+
+FILES UPDATED:
+  - Dashboard.jsx → Replaced "Loading your travel stats..." text with skeletons
+  - BrowsePlaces.jsx → Replaced empty screen with 6 skeleton cards
+  - MyItineraries.jsx → Replaced "Loading your journeys..." with 4 skeleton cards
+
+
+================================================================================
+CHANGE 6: WhatsApp Share in ItineraryResult
+================================================================================
+
+FILE: pages/user/ItineraryResult.jsx
+
+WHAT WAS ADDED:
+  - Green "WhatsApp" share button in the header
+  - Generates a plain text summary of the itinerary (under 1000 characters)
+  - Opens WhatsApp with the text pre-filled using: wa.me/?text=...
+
+SAMPLE OUTPUT:
+  🛕 *Varanasi Trip*
+  📅 3 days • 👥 4 travelers • 💰 ₹15000
+
+  *Day 1:*
+    📍 Kashi Vishwanath
+    📍 Dashashwamedh Ghat (₹0)
+
+  *Day 2:*
+    📍 Sarnath (₹50)
+
+  _Generated by Tirthing_ ✨
+
+WHY:
+  WhatsApp is the primary way Indian families coordinate travel plans.
+
+
+================================================================================
+CHANGE 7: Accessibility Mode Toggle
+================================================================================
+
+NEW FILE: hooks/useAccessibility.js
+UPDATED: components/Sidebar.jsx
+UPDATED: index.css
+
+WHAT IT DOES:
+  - "A11y: Off" button in the sidebar footer
+  - When toggled ON:
+    → Text gets bigger (adds "text-lg" to HTML element)
+    → All animations and transitions are disabled
+    → Buttons get more padding (bigger touch targets)
+  - Preference saved in localStorage so it survives page refreshes
+
+WHY:
+  Designed for elderly pilgrim users (65+) who may find small text
+  hard to read and rapid animations disorienting.
+
+
+================================================================================
+CHANGE 8: Budget Tracker
+================================================================================
+
+NEW FILE: pages/user/BudgetTracker.jsx
+UPDATED: App.jsx (added route)
+UPDATED: ItineraryResult.jsx (added "Track Expenses" button)
+
+ROUTE: /trip/:itineraryId/tracker
+
+FEATURES:
+  - Shows planned budget vs actual spending
+  - Progress bar: green → yellow at 90% → red when over budget
+  - Add expenses with category (food, transport, offering, etc.)
+  - Delete expenses
+  - Category breakdown (pie-chart-style list)
+  - All data in localStorage (works offline, no backend needed)
+
+7 EXPENSE CATEGORIES:
+  🚗 Transport | 🍽 Food | 🏨 Stay | 🎫 Entry Fee |
+  🙏 Offering | 🛍 Shopping | 📦 Other
+
+
+================================================================================
+CHANGE 9: Transport Cost Display
+================================================================================
+
+UPDATED: backend/utils/engine.js
+UPDATED: pages/user/ItineraryResult.jsx
+
+WHAT CHANGED:
+
+  Backend (engine.js):
+    Before: The engine calculated transport costs internally but only saved
+            a total per day. Individual per-hop data was thrown away.
+    After:  Each place now includes:
+              transportMode  → "walk", "cycle_rickshaw", or "auto_rickshaw"
+              transportCost  → fare in rupees (0 for walking)
+              distanceKm     → road distance between sites
+              travelTimeMin  → estimated travel time in minutes
+
+  Frontend (ItineraryResult.jsx):
+    Between each pair of sites in the timeline, shows:
+      🚶 Walk 0.8 km                          (if < 1.5 km)
+      🛺 Rickshaw 3.2 km • ~12 min • ₹68     (if < 5 km)
+      🛺 Auto 7.5 km • ~25 min • ₹153        (if > 5 km)
+
+  BUG FIX:
+    This was a data-shape mismatch we caught during the audit. The frontend
+    expected transport data on each place object, but the engine wasn't
+    providing it. The engine was calculating it correctly but discarding the
+    per-hop values. We fixed the engine to embed this data.
+
+
+================================================================================
+CHANGE 10: Delete Itinerary API
+================================================================================
+
+NEW: Backend DELETE endpoint for itineraries
+
+FILES:
+  - controllers/itinerary.controller.js → Added deleteItinerary function
+  - routes/itinerary.routes.js → Added DELETE /:id route
+  - services/itinerary.service.js → Added deleteItinerary() method
+
+SECURITY:
+  The delete function checks ownership — a user can ONLY delete their own
+  itineraries. If user A tries to delete user B's trip, they get a 403
+  (Forbidden) error. This prevents users from deleting each other's data.
+
+
+================================================================================
+COMPLETE LIST OF ALL FILES CREATED OR MODIFIED
+================================================================================
+
+NEW FILES CREATED:
+  frontend/src/context/AuthContext.jsx       → Auth state management
+  frontend/src/components/common/SkeletonCard.jsx → Loading placeholders
+  frontend/src/hooks/useAccessibility.js     → A11y toggle hook
+  frontend/src/pages/user/BudgetTracker.jsx  → Expense tracker page
+
+MODIFIED FILES:
+  backend/server.js                          → Cookie parser + CORS
+  backend/controllers/auth.controller.js     → Cookie auth + /me + /logout
+  backend/middlewares/auth.middleware.js      → Read from cookies
+  backend/routes/auth.routes.js              → /me and /logout routes
+  backend/controllers/itinerary.controller.js → Delete handler
+  backend/routes/itinerary.routes.js         → Delete route
+  backend/utils/engine.js                    → Per-hop transport data
+  frontend/src/api/axios.js                  → withCredentials
+  frontend/src/main.jsx                      → AuthProvider wrapper
+  frontend/src/App.jsx                       → Budget tracker route
+  frontend/src/index.css                     → Accessibility CSS
+  frontend/src/pages/Login.jsx               → Cookie auth
+  frontend/src/pages/Signup.jsx              → Cookie auth
+  frontend/src/pages/user/GenerateItinerary.jsx → useTransition
+  frontend/src/pages/user/BrowsePlaces.jsx   → useDeferredValue + search
+  frontend/src/pages/user/MyItineraries.jsx  → useOptimistic + delete
+  frontend/src/pages/user/Dashboard.jsx      → Skeleton loading
+  frontend/src/pages/user/ItineraryResult.jsx → WhatsApp + transport + tracker
+  frontend/src/components/Sidebar.jsx        → A11y toggle + useAuth
+  frontend/src/components/Navbar.jsx         → useAuth
+  frontend/src/components/ProtectedRoute.jsx → useAuth + loading state
+  frontend/src/services/itinerary.service.js → Delete method
+
+================================================================================

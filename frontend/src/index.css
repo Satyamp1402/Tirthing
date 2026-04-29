@@ -75,3 +75,25 @@
     background-color: var(--color-scrollbar-thumb-hover);
   }
 }
+
+/* ── Accessibility mode ──────────────────────────────────────────────
+   When the a11y toggle is on, useAccessibility.js sets
+   data-reduce-motion="true" on <html>. These rules respond to that
+   attribute, disabling animations and enlarging interactive targets
+   for elderly pilgrim users who may find rapid motion disorienting. */
+
+@layer base {
+  html[data-reduce-motion="true"] *,
+  html[data-reduce-motion="true"] *::before,
+  html[data-reduce-motion="true"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* Increase button/link padding when accessibility mode is active */
+  html[data-reduce-motion="true"] button,
+  html[data-reduce-motion="true"] a {
+    padding: var(--a11y-btn-padding, revert);
+  }
+}

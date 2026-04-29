@@ -1,14 +1,25 @@
+// ============================================================================
+// Sidebar — Navigation + accessibility toggle for elderly pilgrim users
+// ============================================================================
+//
+// The accessibility toggle at the bottom increases text size, reduces
+// motion, and enlarges touch targets. Designed for users 65+ who may
+// struggle with small text and rapid animations on mobile devices.
+// ============================================================================
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Map, MapPin, PlusCircle, LogOut, X } from 'lucide-react';
+import { LayoutDashboard, Map, MapPin, PlusCircle, LogOut, X, Accessibility } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import useAccessibility from '../hooks/useAccessibility';
 
 const Sidebar = ({ onClose }) => {
-  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const { user, logout } = useAuth();
   const location = useLocation();
+  const { isAccessible, toggleAccessibility } = useAccessibility();
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    await logout();
     window.location.href = '/';
   };
 
@@ -63,6 +74,7 @@ const Sidebar = ({ onClose }) => {
                   ? 'bg-primary-soft text-primary shadow-sm border border-primary/10'
                   : 'text-text-muted hover:bg-input-bg hover:text-text'
               }`}
+              aria-current={isActive ? 'page' : undefined}
             >
               <item.icon className={`w-5 h-5 ${isActive ? 'text-primary' : 'text-text-muted'}`} />
               {item.name}
@@ -73,7 +85,7 @@ const Sidebar = ({ onClose }) => {
 
       <div className="p-4 border-t border-border">
         {/* User Info */}
-        <div className="flex items-center gap-3 px-0 py-3  border-b border-border">
+        <div className="flex items-center gap-3 px-0 py-3 border-b border-border">
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-sm shrink-0"
             style={{ background: 'var(--gradient-primary)' }}
@@ -91,10 +103,27 @@ const Sidebar = ({ onClose }) => {
           </div>
         </div>
 
+        {/* Accessibility toggle — designed for elderly pilgrim users, 65+
+            Increases text size, reduces motion, and enlarges touch targets */}
+        <button
+          onClick={toggleAccessibility}
+          className={`flex items-center gap-3 w-full mt-3 px-3 py-3 font-medium rounded-xl transition-all ${
+            isAccessible
+              ? 'bg-primary-soft text-primary border border-primary/10'
+              : 'text-text-muted hover:bg-input-bg hover:text-text'
+          }`}
+          aria-label={isAccessible ? 'Disable accessibility mode' : 'Enable accessibility mode'}
+          aria-pressed={isAccessible}
+        >
+          <Accessibility className="w-5 h-5" />
+          {isAccessible ? 'A11y: On' : 'A11y: Off'}
+        </button>
+
         {/* Logout */}
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 w-full mt-3 px-3 py-3 text-red-500 font-medium rounded-xl hover:bg-red-50 transition-all"
+          aria-label="Log out"
         >
           <LogOut className="w-5 h-5" />
           Logout

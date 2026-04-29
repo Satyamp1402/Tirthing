@@ -1,0 +1,311 @@
+================================================================================
+PERSON 1 — AUTHENTICATION & SECURITY SYSTEM
+================================================================================
+
+BRIEF OVERVIEW:
+You are responsible for the entire login/logout system of Tirthing. This
+covers how users create accounts, how passwords are protected, how sessions
+work using cookies, and how we prevent unauthorized access to protected
+pages. You handle BOTH the backend (server-side) and frontend (browser-side)
+parts of authentication.
+
+Your files:
+  Backend:  server.js, auth.controller.js, auth.middleware.js,
+            admin.middleware.js, auth.routes.js, user.model.js
+  Frontend: AuthContext.jsx, axios.js, Login.jsx, Signup.jsx,
+            ProtectedRoute.jsx, Navbar.jsx
+
+================================================================================
+
+
+1. THE USER DATABASE MODEL
+===========================
+
+Every user in our system is stored in MongoDB with these fields:
+  - name     → "Satyam Sharma" (required)
+  - email    → "satyam@gmail.com" (required, must be unique)
+  - password → "$2a$10$xYz..." (required, stored as a hash — NOT plain text)
+  - role     → "user" or "admin" (default is "user")
+  - timestamps → createdAt and updatedAt added automatically
+
+The "unique" constraint on email means if someone tries to register with
+an email that already exists, MongoDB will reject it. This prevents
+duplicate accounts.
+
+The "enum" on role means ONLY "user" or "admin" are accepted. If someone
+tries to set role to "superadmin" or anything else, it gets rejected.
+
+
+2. PASSWORD SECURITY — BCRYPT HASHING
+======================================
+
+We NEVER store passwords in plain text. Here's why and how:
+
+THE PROBLEM:
+  If we stored "password123" directly in the database, and a hacker broke
+  into our database, they'd see everyone's actual passwords. They could
+  then log into anyone's account.
+
+THE SOLUTION — HASHING:
+  We convert "password123" into something like "$2a$10$LM9sFkX..."
+  This is a ONE-WAY conversion — you CANNOT reverse it back to "password123".
+
+HOW BCRYPT WORKS:
+  Step 1: Generate a "salt" — a random string (10 rounds of randomness)
+  Step 2: Mix the password with the salt and run it through the hash function
+  Step 3: Store the result. Even the same password produces different hashes
+          each time because the salt is different.
+
+WHY SALTING MATTERS:
+  Without salt, everyone with password "password123" would have the same hash.
+  A hacker could use a pre-computed "rainbow table" to look up common hashes.
+  With salt, every hash is unique — rainbow tables become useless.
+
+DURING LOGIN:
+  bcrypt.compare("password123", storedHash) → internally applies the same
+  salt and checks if the result matches. Returns true or false.
+
+IMPORTANT: We never tell the user "wrong password" or "email not found"
+separately. We always say "Invalid credentials" so hackers can't figure out
+which one is wrong (called "enumeration attack prevention").
+
+
+3. JWT (JSON WEB TOKEN)
+========================
+
+After a successful login, we need a way to "remember" that the user is
+authenticated. We use JWT for this.
+
+WHAT IS A JWT?
+  It's a signed string that contains information. Ours contains:
+    { id: "user123abc", role: "user" }
+  Plus an expiry time (7 days) and a signature.
+
+HOW IT'S CREATED:
+  jwt.sign({ id: user._id, role: user.role }, SECRET_KEY, { expiresIn: '7d' })
+
+  The SECRET_KEY is stored in our .env file. Only our server knows it.
+  If anyone tampers with the token (changes the role to "admin"), the
+  signature check will fail because they don't know the secret key.
+
+HOW IT'S VERIFIED:
+  jwt.verify(token, SECRET_KEY) → If valid, returns the decoded payload
+  { id: "user123abc", role: "user" }. If expired or tampered, throws an error.
+
+
+4. WHY COOKIES INSTEAD OF LOCALSTORAGE
+========================================
+
+This is the most important concept for your viva. Understand it deeply.
+
+OLD APPROACH (what many tutorials teach — INSECURE):
+  1. User logs in
+  2. Backend sends: { token: "eyJhbGci..." } in the response body
+  3. Frontend does: localStorage.setItem('token', 'eyJhbGci...')
+  4. On every request: frontend reads token from localStorage and puts it
+     in the Authorization header
+
+  PROBLEM: Any JavaScript running on the page can call localStorage.getItem().
+  If a hacker injects a script (called XSS — Cross-Site Scripting), they
+  can steal the token and use it from their own computer to impersonate the
+  user. The stolen token works until it expires (7 days in our case).
+
+OUR APPROACH (industry standard — SECURE):
+  1. User logs in
+  2. Backend sets: res.cookie('token', 'eyJhbGci...', { httpOnly: true })
+  3. The browser stores the cookie automatically — JavaScript can't read it
+  4. On every request: the browser sends the cookie automatically
+
+  WHY THIS IS SAFER:
+  - httpOnly: true → JavaScript literally CANNOT access this cookie.
+    document.cookie won't show it. localStorage can't read it.
+    Even if a hacker injects a script, they can't steal it.
+  - The browser handles everything automatically. No manual token management.
+
+COOKIE SETTINGS EXPLAINED:
+  httpOnly: true       → JS can't read the cookie (XSS protection)
+  secure: true         → Cookie only sent over HTTPS (prevents interception)
+  sameSite: 'none'     → Allows cross-origin (frontend on Vercel, backend on Render)
+  maxAge: 7 days       → Cookie expires when the JWT expires
+  path: '/'            → Cookie sent for all routes
+
+
+5. THE AUTHENTICATION FLOW (Step by Step)
+==========================================
+
+SIGNUP FLOW:
+  1. User fills name, email, password on the Signup page
+  2. Frontend sends POST /api/auth/signup with the data
+  3. Backend checks: "Does this email already exist?" → if yes, error
+  4. Backend hashes the password with bcrypt (10 rounds)
+  5. Backend saves the user to MongoDB
+  6. Backend creates a JWT and sets it as an httpOnly cookie
+  7. Backend responds with { user: { id, name, email, role } }
+  8. Frontend receives the response → calls login(data.user) on AuthContext
+  9. AuthContext updates → all components re-render with the new user
+  10. React Router navigates to /dashboard
+
+LOGIN FLOW:
+  1. User enters email and password on the Login page
+  2. Frontend sends POST /api/auth/login
+  3. Backend finds the user by email → if not found, error
+  4. Backend compares the entered password with the stored hash
+  5. If match → create JWT → set cookie → respond with user info
+  6. If no match → error "Invalid credentials"
+  7. Frontend receives user info → updates AuthContext → navigates
+
+PAGE REFRESH FLOW:
+  1. User refreshes the browser (or opens the app)
+  2. AuthContext's useEffect runs → calls GET /api/auth/me
+  3. Browser automatically sends the cookie with this request
+  4. Backend's auth middleware reads the cookie → decodes the JWT
+  5. If valid → getMe() looks up the user → responds with user info
+  6. If invalid (expired) → 401 error → AuthContext sets user to null
+  7. ProtectedRoute checks: user is null → redirect to /login
+
+LOGOUT FLOW:
+  1. User clicks "Logout" in the Sidebar
+  2. Frontend calls POST /api/auth/logout
+  3. Backend sets the cookie to empty with maxAge: 0 (immediate expiry)
+  4. Browser deletes the cookie
+  5. Frontend sets user to null in AuthContext
+  6. All protected pages redirect to /login
+
+
+6. AUTH MIDDLEWARE — THE GATEKEEPER
+====================================
+
+Every protected route goes through the auth middleware FIRST.
+
+How it works:
+  1. Extract token from req.cookies.token
+  2. If no token → respond with 401 "No token provided"
+  3. If token exists → decode it with jwt.verify(token, SECRET)
+  4. If decoding fails → respond with 401 "Invalid or expired token"
+  5. If valid → attach decoded data to req.user → call next()
+
+After this middleware, any controller can access req.user.id and req.user.role.
+
+ADMIN MIDDLEWARE (runs AFTER auth middleware):
+  Simply checks: req.user.role === 'admin'?
+  If yes → continue. If no → 403 "Access forbidden. Admin role required."
+
+
+7. FRONTEND AUTH CONTEXT
+=========================
+
+AuthContext is the single source of truth for "who is logged in?"
+
+Before (BAD approach):
+  Every component independently did:
+    const user = JSON.parse(localStorage.getItem('user'));
+  Problem: If one component updates the user, others don't know about it.
+  You end up with stale data and inconsistent UI.
+
+After (GOOD approach):
+  One central AuthContext provides { user, isLoading, login, logout }
+  Every component uses: const { user } = useAuth();
+  When the user changes, ALL components update simultaneously.
+
+Think of it like a school's PA system. The old way was passing notes between
+classrooms — slow, some rooms might not get the message. The new way is the
+PA system — one announcement, everyone hears it at the same time.
+
+
+8. PROTECTED ROUTE — PREVENTING UNAUTHORIZED ACCESS
+=====================================================
+
+ProtectedRoute wraps all dashboard pages. It's a "gate" that checks:
+
+  Step 1: Is isLoading true?
+    → Yes: Show a spinner. We MUST wait because the /me call hasn't 
+    finished yet. Without this check, the route sees user=null and 
+    immediately redirects to login, even for logged-in users.
+    This is called the "flash-to-login bug."
+
+  Step 2: Is user null?
+    → Yes: Not logged in → redirect to /login
+
+  Step 3: Does the page require a specific role?
+    → If page requires "admin" but user is "user" → redirect to /dashboard
+    → If page requires "user" but user is "admin" → redirect to /admin/dashboard
+
+
+9. CORS (Cross-Origin Resource Sharing)
+========================================
+
+WHAT: Our frontend is at localhost:5173 and our backend is at localhost:5000.
+By default, browsers BLOCK requests between different origins (domains/ports).
+CORS tells the browser "this other website is allowed to talk to me."
+
+HOW WE CONFIGURED IT:
+  origin: ["http://localhost:5173", "https://tirthing.vercel.app"]
+    → Only these two websites can make requests to our API
+  credentials: true
+    → Allow cookies to be sent cross-origin
+
+Without CORS, the frontend would get a "blocked by CORS policy" error.
+
+
+10. SERVER SETUP
+=================
+
+The server.js file is the entry point. In order, it:
+  1. Loads environment variables (.env file has DB URL, JWT secret, etc.)
+  2. Creates Express app
+  3. Configures CORS (which websites can access the API)
+  4. Adds express.json() — parses JSON request bodies
+  5. Adds cookieParser() — reads cookies from requests
+  6. Registers 4 route groups:
+       /api/auth      → Login, signup, me, logout
+       /api/place     → Place CRUD
+       /api/itinerary → Trip generation
+       /api/dashboard → Stats
+  7. Connects to MongoDB
+  8. Starts listening on port 5000
+
+
+================================================================================
+LIKELY VIVA QUESTIONS AND ANSWERS
+================================================================================
+
+Q: What is the difference between authentication and authorization?
+A: Authentication = "Who are you?" (login/signup)
+   Authorization = "Are you allowed to do this?" (admin middleware)
+
+Q: What is XSS and how do httpOnly cookies prevent it?
+A: XSS (Cross-Site Scripting) is when a hacker injects malicious JavaScript 
+   into a webpage. httpOnly cookies can't be read by JavaScript, so even if 
+   XSS occurs, the attacker can't steal the authentication token.
+
+Q: Why do we hash passwords instead of encrypting them?
+A: Encryption is two-way (can be reversed). Hashing is one-way (can't be 
+   reversed). Even if our database is compromised, no one can recover the 
+   original passwords. During login, we hash the input and compare hashes.
+
+Q: What happens when the JWT expires?
+A: The next API call fails with 401. AuthContext catches this, sets user to 
+   null, and ProtectedRoute redirects to /login. The user must log in again.
+
+Q: Why sameSite: 'none' in production?
+A: Because our frontend (Vercel) and backend (Render) are on different 
+   domains. sameSite: 'none' allows the cookie to be sent cross-origin. 
+   In development (localhost), we use 'lax' which is safer but only works 
+   for same-origin.
+
+Q: What is the purpose of the /me endpoint?
+A: Session validation. When the user refreshes, the frontend calls /me with 
+   the existing cookie. If the cookie is valid, the backend returns the user 
+   info. If expired, it returns 401. This is how we "remember" logged-in users.
+
+Q: Why use Context instead of Redux or Zustand for auth?
+A: Auth state is simple (one user object + one boolean). Context is built into 
+   React, requires no extra library, and is perfectly suited for simple, 
+   app-wide state. Redux adds complexity we don't need.
+
+Q: What would happen if we didn't have the isLoading check in ProtectedRoute?
+A: On every page refresh, the user would briefly see the login page before 
+   the /me call completes. This "flash" is confusing and makes it look like 
+   they've been logged out when they haven't.
+
+================================================================================

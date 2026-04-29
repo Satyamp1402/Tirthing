@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/auth.service';
+import { useAuth } from '../context/AuthContext';
 import { Eye, EyeOff } from "lucide-react";
 
 const Login = ({ isAdmin = false }) => {
@@ -10,34 +11,36 @@ const Login = ({ isAdmin = false }) => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       const data = await authService.login(email, password);
-      // Optional check if trying to log in as admin but not an admin
+
       if (isAdmin && data.user.role !== 'admin') {
         setError('Unauthorized: Admin access required.');
         return;
       }
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+
+      // The backend already set the httpOnly cookie in its response.
+      // We just update React context so the UI reflects the login.
+      // No more localStorage.setItem — the token lives in a secure cookie.
+      login(data.user);
+
       if (data.user.role === "admin") {
         navigate("/admin/dashboard");
       } else {
         navigate("/dashboard");
       }
     } catch (err) {
-      console.log(err);
-
       const message =
         err.response?.data?.message ||
         err.message ||
         'Something went wrong';
-
       setError(message);
-    }finally{
+    } finally {
       setLoading(false);
     }
   };
@@ -81,7 +84,6 @@ const Login = ({ isAdmin = false }) => {
                 }}
               />
 
-              {/* Toggle Button */}
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}

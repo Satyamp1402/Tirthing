@@ -1,0 +1,34 @@
+# Render Blueprint — Auto-deploy the Tirthing backend
+# Docs: https://render.com/docs/blueprint-spec
+#
+# After connecting the repo to Render, set these environment variables
+# in the Render dashboard (NOT in this file — they contain secrets):
+#   MONGO_URI, JWT_SECRET, FRONTEND_URL,
+#   CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+
+services:
+  - type: web
+    name: tirthing-backend
+    runtime: node
+    region: singapore     # closest to Indian users
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000       # Render's default for free tier
+      - key: MONGO_URI
+        sync: false        # set manually in dashboard
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false

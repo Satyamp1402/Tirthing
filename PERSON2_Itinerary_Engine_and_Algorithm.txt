@@ -1,0 +1,340 @@
+================================================================================
+PERSON 2 — ITINERARY ENGINE & ROUTE OPTIMIZATION ALGORITHM
+================================================================================
+
+BRIEF OVERVIEW:
+You are responsible for the core "brain" of Tirthing — the itinerary
+generation engine. This is the algorithm that takes a user's inputs
+(destination, budget, days, group size) and produces an optimized day-by-day
+travel plan. You should understand every phase of the algorithm, the transport
+cost logic, the OSRM integration, and the itinerary API endpoints.
+
+Your files:
+  Backend:  utils/engine.js, utils/osrm.js,
+            controllers/itinerary.controller.js, routes/itinerary.routes.js
+  Frontend: services/itinerary.service.js
+
+================================================================================
+
+
+1. WHAT DOES THE ENGINE DO?
+============================
+
+Input:  A city name, number of days, total budget, group size
+Output: A complete day-by-day plan with scheduled times, places to visit,
+        transport between sites, and costs
+
+Example:
+  Input:  Varanasi, 3 days, ₹15,000, 4 people
+  Output:
+    Day 1: Dashashwamedh Ghat (5:00-6:30) → Kashi Vishwanath (7:30-9:00) → ...
+    Day 2: Sarnath (7:00-10:00) → Durga Temple (11:00-12:00) → ...
+    Day 3: Assi Ghat (5:00-6:30) → BHU (8:00-10:00) → ...
+
+The algorithm goes through 5 phases. Let me explain each one.
+
+
+2. PHASE 1 — BUDGET ANALYSIS
+==============================
+
+First, we figure out what the user can realistically afford.
+
+STEP 1: Calculate per-person-per-day budget
+  Formula: totalBudget ÷ groupSize ÷ days
+  Example: ₹15,000 ÷ 4 people ÷ 3 days = ₹1,250 per person per day
+
+STEP 2: Detect the budget tier
+  Under ₹1,000/day → "Budget" tier
+  Under ₹3,500/day → "Comfort" tier
+  Above ₹3,500/day → "Premium" tier
+
+STEP 3: Calculate fixed daily costs (these cannot be avoided)
+  Budget tier:  ₹600 (hostel) + ₹200 (street food) + ₹100 (misc) = ₹900/day
+  Comfort tier: ₹2,000 (hotel) + ₹450 (restaurants) + ₹200 (misc) = ₹2,650/day
+  Premium tier: ₹5,000 (heritage hotel) + ₹800 (fine dining) + ₹400 = ₹6,200/day
+
+  These are realistic costs for Indian pilgrimage cities as of 2024-25.
+
+STEP 4: Calculate "flexible budget"
+  Flexible = perPersonPerDay − fixedDailyCosts
+  Example: ₹1,250 − ₹900 = ₹350 per person per day available for entry fees
+  Total flexible = ₹350 × 4 people × 3 days = ₹4,200
+
+  If flexible budget is NEGATIVE (total budget too low for even basic stay):
+    → Engine returns an ERROR with a suggestion:
+      "Your budget is too low for a 3-day trip for 4 people. 
+       Minimum required: ₹10,800 (budget tier)."
+    → The frontend shows this message so the user can adjust.
+
+
+3. PHASE 2 — SITE SELECTION (Greedy Algorithm)
+================================================
+
+Now we pick WHICH places from the database to include in the trip.
+
+WHAT IS A GREEDY ALGORITHM?
+  At each step, pick the best available option right now, without looking
+  ahead. It's like a hungry person at a buffet — they grab the best item
+  they see, eat it, then grab the next best available item.
+
+  It doesn't guarantee the absolute best solution, but it's fast and
+  produces very good results.
+
+HOW WE SELECT SITES:
+  1. Get all places in the city from the database
+  2. Sort them by priority: Priority 1 (Must Visit) first, then 2, then 3
+  3. Within the same priority, sort by entry fee (cheapest first)
+  4. Go through the sorted list one by one:
+     - Calculate: entryFee × groupSize = total cost for this place
+     - If it fits within remaining flexible budget → ADD it, subtract the cost
+     - If too expensive → SKIP it
+  5. Also check: total visit hours of selected sites ≤ available hours in trip
+     (days × 13 hours per day = total available hours)
+
+  Example with ₹4,200 flexible budget and 4 people:
+    Kashi Vishwanath (Priority 1, Free)      → Add (₹0)     Remaining: ₹4,200
+    Dashashwamedh Ghat (Priority 1, Free)    → Add (₹0)     Remaining: ₹4,200
+    Sarnath (Priority 1, ₹50 × 4 = ₹200)    → Add (₹200)   Remaining: ₹4,000
+    BHU (Priority 2, Free)                   → Add (₹0)     Remaining: ₹4,000
+    Ramnagar Fort (Priority 2, ₹75 × 4 = ₹300) → Add (₹300) Remaining: ₹3,700
+    ... continue until budget or time runs out
+
+
+4. PHASE 3 — OSRM ROAD DATA FETCH
+====================================
+
+Before grouping sites into days, we need to know the REAL distance between
+every pair of places.
+
+WHAT IS OSRM?
+  Open Source Routing Machine — a free service that calculates real road
+  distances and travel times (like Google Maps but free and open source).
+
+WHY NOT JUST USE STRAIGHT-LINE DISTANCE?
+  In Varanasi's old city, two places might be 1 km apart as the crow flies,
+  but 3-4 km apart by road because the lanes wind through narrow alleys,
+  loop around temples, and cross rivers. Road distance is much more accurate.
+
+HOW WE USE IT:
+  1. Collect coordinates (latitude, longitude) of all selected sites
+  2. Send them to OSRM's "table" endpoint in ONE API call
+  3. OSRM returns TWO matrices (grids):
+     - Distance matrix: road distance in km between every pair
+     - Duration matrix: travel time in minutes between every pair
+
+  Example for 3 sites:
+                    Site A    Site B    Site C
+    Site A            0        2.3       4.1
+    Site B           2.3       0        1.8
+    Site C           4.1       1.8       0
+
+  Reading: Site A to Site B is 2.3 km by road.
+  The diagonal is always 0 (distance from a place to itself).
+
+EFFICIENCY:
+  For 20 sites, without the table endpoint, we'd need 20 × 20 = 400
+  individual API calls. With it, we make exactly 1 call. Massive improvement.
+
+HAVERSINE FALLBACK:
+  If OSRM's server is down (it's a free public service), we use the
+  Haversine formula — a mathematical formula that calculates the shortest
+  distance between two points on a sphere (the Earth).
+
+  Haversine is less accurate (ignores roads, rivers, buildings) but ensures
+  the engine ALWAYS produces a result. The app never crashes because OSRM
+  is unavailable.
+
+
+5. PHASE 4 — CLUSTERING (Grouping Sites into Days)
+====================================================
+
+Goal: Sites that are CLOSE TOGETHER should be on the SAME DAY.
+(Nobody wants to go from the north of the city to the south and back.)
+
+ALGORITHM — ANCHOR-BASED CLUSTERING:
+  1. Calculate the geographic CENTER of all selected sites
+  2. Find the site closest to the center → this is the "anchor" for Day 1
+  3. Find the closest unassigned site to the anchor → add it to Day 1
+  4. Keep adding the closest unassigned site to Day 1 until:
+     - Total visit hours + travel time between sites ≥ available hours (13h)
+     - OR no more nearby sites
+  5. For Day 2, pick a new anchor from the remaining unassigned sites
+     (the one closest to the center of remaining sites)
+  6. Repeat until all sites are assigned to a day
+
+WHY TRAVEL TIME, NOT DISTANCE?
+  A 5 km road through city traffic might take 30 minutes, while a 5 km
+  highway stretch might take 10 minutes. Clustering by travel TIME gives
+  more realistic day plans.
+
+RESULT:
+  Day 1 might be "all ghats along the river" (they're close together)
+  Day 2 might be "temples in the old city" (clustered in one area)
+  Day 3 might be "Sarnath + outlying sites" (further from center)
+
+
+6. PHASE 5 — SCHEDULING (Time Slots + Routing)
+================================================
+
+Within each day, we need to decide the ORDER of visits and WHEN to visit.
+
+TIME SLOTS:
+  The Place model has a "time_slot" field:
+    'dawn'    → Must be at 5:00 AM (early morning Ganga Aarti)
+    'morning' → Best visited 7:00 AM - 1:00 PM (temple hours)
+    'aarti'   → MUST be at 6:30 PM (evening Aarti ceremony, non-negotiable)
+    'anytime' → Flexible, fills gaps in the schedule
+
+SCHEDULING ORDER:
+  1. Dawn sites go first (5:00 AM start)
+  2. Morning sites next (7:00 AM start if no dawn sites)
+  3. Anytime sites fill the middle of the day
+  4. Aarti sites are ALWAYS last, pinned at 6:30 PM
+
+WITHIN EACH GROUP — NEAREST NEIGHBOR ROUTING:
+  1. Start from the first site
+  2. Find the closest UNVISITED site (by travel time, not distance)
+  3. Visit it
+  4. From that site, find the closest unvisited site again
+  5. Repeat until all sites in the group are visited
+
+  Example: You have 4 morning sites A, B, C, D
+    Start at A → B is closest (3 min) → visit B
+    From B → D is closest (5 min) → visit D
+    From D → C is closest (7 min) → visit C
+    Final order: A → B → D → C (not A → B → C → D alphabetically)
+
+
+7. TRANSPORT COST CALCULATION
+==============================
+
+Between every pair of consecutive sites in a day, we calculate:
+
+  Distance < 1.5 km → MODE: Walk (free, pleasant along the ghats)
+  Distance < 5.0 km → MODE: Cycle rickshaw (₹30 base + ₹12 per km)
+  Distance > 5.0 km → MODE: Auto rickshaw (₹40 base + ₹15 per km)
+
+  Example: 3.2 km between two sites
+    Mode: Cycle rickshaw
+    Cost: ₹30 + (3.2 × ₹12) = ₹30 + ₹38.40 = ₹68
+
+These per-hop transport details are embedded into each place object:
+  - transportMode: "walk", "cycle_rickshaw", or "auto_rickshaw"
+  - transportCost: fare in rupees (0 for walking)
+  - distanceKm: road distance
+  - travelTimeMin: estimated travel time
+
+The first site of each day has NO transport data (you're already there).
+Each subsequent site has transport data showing "how you GET to this site."
+
+
+8. THE ITINERARY API ENDPOINTS
+===============================
+
+A) POST /api/itinerary/generate
+   1. Frontend sends: { destination, days, budget, groupSize }
+   2. Backend fetches all places in that city from MongoDB
+   3. Runs the engine → gets the plan (or error)
+   4. If error → return 400 with suggestion message
+   5. If success → save to MongoDB → return 201 with the itinerary
+
+B) GET /api/itinerary/my
+   Returns all itineraries for the logged-in user, newest first.
+   The auth middleware provides req.user.id from the cookie.
+
+C) GET /api/itinerary/:id
+   Returns a single itinerary by its MongoDB _id.
+
+D) DELETE /api/itinerary/:id
+   1. Find the itinerary by ID
+   2. OWNERSHIP CHECK: Does itinerary.user match req.user.id?
+      → If not → 403 Forbidden (can't delete someone else's trip)
+      → If yes → delete from MongoDB → return success
+
+   This ownership check is critical for security — without it, any
+   logged-in user could delete anyone's trips by guessing IDs.
+
+
+9. THE OSRM MODULE (utils/osrm.js)
+====================================
+
+Three functions:
+
+  getRoadDistanceKm(coords)
+    → Returns N×N matrix of distances in kilometers
+    → OSRM returns meters, we divide by 1000
+
+  getRoadDurationMatrix(coords)
+    → Returns N×N matrix of travel times in minutes
+    → OSRM returns seconds, we divide by 60
+
+  getRoadMatrices(coords)  ← THIS IS THE ONE WE USE
+    → Returns BOTH distance and duration matrices in a single API call
+    → More efficient: 1 call instead of 2
+
+  All functions handle errors gracefully: if OSRM is unreachable, they
+  return null, and the engine falls back to Haversine.
+
+
+================================================================================
+LIKELY VIVA QUESTIONS AND ANSWERS
+================================================================================
+
+Q: Explain the algorithm step by step.
+A: 5 phases: (1) Analyze budget → detect tier → calculate flexible budget.
+   (2) Select sites greedily — highest priority, cheapest first.
+   (3) Fetch OSRM road distances and travel times.
+   (4) Cluster sites into days — close sites on same day.
+   (5) Schedule each day — dawn first, aarti last, nearest neighbor routing.
+
+Q: What is a greedy algorithm and why did you use it?
+A: A greedy algorithm makes the best local choice at each step. We use it for
+   site selection because it's fast (O(n log n) sorting + O(n) scan) and
+   gives good results. We pick the highest-priority, cheapest place at each
+   step. A perfect solution would require checking all combinations, which is
+   exponentially slow for 50+ sites.
+
+Q: What is the Nearest Neighbor algorithm?
+A: A routing strategy: from your current site, always go to the closest
+   unvisited site next. It's a heuristic for the Traveling Salesman Problem.
+   Not optimal, but fast and gives routes that are typically within 25% of
+   the best possible route.
+
+Q: What happens when OSRM is down?
+A: The engine falls back to the Haversine formula, which calculates
+   straight-line distance between coordinates. Less accurate than road
+   distance, but the engine always produces a result — it never crashes.
+
+Q: Why do you use travel TIME for clustering instead of DISTANCE?
+A: Because 5 km on a highway (10 min) is very different from 5 km through
+   old-city lanes (30 min). Clustering by time ensures a day's plan is
+   actually completable within the available hours.
+
+Q: How do you handle the "budget too low" case?
+A: The engine calculates the minimum budget needed for the cheapest tier,
+   multiplied by group size and days. It returns an error with a structured
+   suggestion: { message, detectedTier, suggestion: { minBudget, ... } }.
+   The frontend shows this to the user so they can increase their budget.
+
+Q: Why are Aarti sites pinned at 6:30 PM?
+A: Evening Aarti (like the Ganga Aarti at Dashashwamedh Ghat in Varanasi)
+   is a daily sunset ceremony at a fixed time. It's a religious tradition
+   that cannot be moved — the engine must respect this constraint.
+
+Q: Why embed transport data per-place instead of per-day?
+A: The frontend needs to show transport info (walk/rickshaw, cost, time)
+   between each pair of sites in the timeline. Per-day totals don't tell
+   you which specific hops are walkable and which need a rickshaw.
+
+Q: What is the time complexity of the engine?
+A: Roughly O(n² log n): sorting is O(n log n), OSRM matrix is O(n²), nearest
+   neighbor routing is O(n²). For typical pilgrim cities with 30-50 sites,
+   this runs in under a second.
+
+Q: What is the difference between Haversine and OSRM distance?
+A: Haversine = straight-line distance on Earth's surface (ignores roads).
+   OSRM = actual road distance (follows real streets, bridges, lanes).
+   In Varanasi, Haversine of 1 km can be 3-4 km by OSRM because of
+   winding lanes and river crossings.
+
+================================================================================

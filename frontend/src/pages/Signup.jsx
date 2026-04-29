@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/auth.service';
+import { useAuth } from '../context/AuthContext';
 import { Eye, EyeOff } from "lucide-react";
 
 const Signup = ({ isAdmin = false }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('user');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -19,8 +20,11 @@ const Signup = ({ isAdmin = false }) => {
     try {
       const role = isAdmin ? "admin" : "user";
       const data = await authService.signup(name, email, password, role);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+
+      // The backend sets the httpOnly cookie — we just update context.
+      // No more localStorage.setItem('token') or localStorage.setItem('user').
+      login(data.user);
+
       if (data.user.role === "admin") {
         navigate("/admin/dashboard");
       } else {
@@ -28,7 +32,7 @@ const Signup = ({ isAdmin = false }) => {
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Signup failed');
-    }finally{
+    } finally {
       setLoading(false);
     }
   };
@@ -81,7 +85,6 @@ const Signup = ({ isAdmin = false }) => {
                 }}
               />
 
-              {/* Toggle Button */}
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -90,19 +93,6 @@ const Signup = ({ isAdmin = false }) => {
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            {/* <div>
-              <label className="text-sm font-medium text-text-muted">Role</label>
-              <select
-                className="mt-1 block w-full px-4 py-2 bg-input-bg border border-border text-text rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-colors"
-                value={role} onChange={(e) => {
-                  setRole(e.target.value);
-                  setError('');
-                }}
-              >
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div> */}
           </div>
           <div>
             <button

@@ -129,6 +129,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { dashboardService } from '../../services/dashboard.service';
+import SkeletonCard from '../../components/common/SkeletonCard';
 
 const UserDashboard = () => {
   const [data, setData] = useState(null);
@@ -154,10 +155,39 @@ const UserDashboard = () => {
     fetchDashboardData();
   }, []);
 
+  // Skeletons set layout expectations — they show the exact shapes that
+  // content will fill, reducing perceived load time vs a plain spinner
   if (loading)
     return (
-      <div className="p-8 text-text animate-pulse">
-        Loading your travel stats...
+      <div className="p-6 space-y-8">
+        <div className="space-y-2">
+          <div className="h-8 bg-input-bg rounded w-64 animate-pulse" />
+          <div className="h-4 bg-input-bg rounded w-96 animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonCard key={i} variant="stat" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-4">
+            <div className="h-6 bg-input-bg rounded w-32 animate-pulse" />
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="bg-surface border border-border rounded-2xl p-5 animate-pulse flex gap-4">
+                <div className="w-32 h-28 bg-input-bg rounded" />
+                <div className="flex-1 space-y-3 py-2">
+                  <div className="h-5 bg-input-bg rounded w-3/4" />
+                  <div className="h-4 bg-input-bg rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-4">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <SkeletonCard key={i} variant="stat" />
+            ))}
+          </div>
+        </div>
       </div>
     );
 
