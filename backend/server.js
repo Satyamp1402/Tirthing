@@ -15,7 +15,7 @@ const app = express();
 app.use(cors({
   origin: [
     "http://localhost:5173",                           // local frontend
-    process.env.FRONTEND_URL || "https://tirthing.vercel.app" // deployed frontend
+    process.env.FRONTEND_URL || "https://tirthing-phi.vercel.app" // deployed frontend
   ].filter(Boolean),
   credentials: true
 }));
