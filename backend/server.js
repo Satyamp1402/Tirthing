@@ -12,11 +12,23 @@ dotenv.config();
 
 const app = express();
 
+// Build the list of allowed origins
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://tirthing-phi.vercel.app",
+  "https://tirthing.vercel.app"
+];
+if (process.env.FRONTEND_URL) allowedOrigins.push(process.env.FRONTEND_URL);
+console.log('[CORS] Allowed origins:', allowedOrigins);
+
 app.use(cors({
-  origin: [
-    "http://localhost:5173",                           // local frontend
-    process.env.FRONTEND_URL || "https://tirthing-phi.vercel.app" // deployed frontend
-  ].filter(Boolean),
+  origin: function (origin, callback) {
+    // Allow requests with no origin (curl, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    console.log('[CORS] Blocked origin:', origin);
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json());
